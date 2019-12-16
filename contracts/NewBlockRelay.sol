@@ -25,16 +25,20 @@ contract NewBlockRelay {
   uint256[] public candidates;
 
   // Inicialize the maximum block voted
-  uint256 winnerVote = 0;
+  uint256 winnerVote;
   uint256 winnerId = 0;
   uint256 winnerDrMerkleRoot = 0;
   uint256 winnerTallyMerkleRoot = 0;
+  uint256 winnerEpoch = 0;
 
   // The start of witnet to calculate after the current epoch
   uint256 witnetGenesis;
+  uint256 witnetEpoch;
 
+  uint256 endTime;
   // Inicialize the current epoch
-  uint256 currentEpoch;
+  uint256 currentEpoch=0;
+  uint256 lastVote;
 
   // maps the candidate with the number of votes recieved
   mapping(uint256 => uint256) public numberOfVotes;
@@ -51,6 +55,8 @@ contract NewBlockRelay {
   event NewBlock(address indexed _from, uint256 _id);
   event Winner(uint256 _winner);
   event Tie(string _tie);
+  event Epoch(uint256 _epoch);
+  event NumberVotes(uint256 _num);
 
   constructor(uint256 _witnetGenesis) public{
     // Only the contract deployer is able to push blocks
@@ -73,45 +79,56 @@ contract NewBlockRelay {
     require(blocks[_id].drHashMerkleRoot==0, "The block already existed");
     _;
   }
-
+  // Ensures the epoch is valid
+  modifier onlyAfterDate(){
+    require(currentEpoch > witnetEpoch, "Not valid epoch");
+    _;
+  }
+  
 
   /// @dev Post new block into the block relay
   /// @param _blockHash Hash of the block header
   /// @param _drMerkleRoot Merkle root belonging to the data requests
   /// @param _tallyMerkleRoot Merkle root belonging to the tallies
+  /// @param _epoch Epoch for which the block is proposed
   function proposeBlock(
     uint256 _blockHash,
-    //uint256 _epoch,
     uint256 _drMerkleRoot,
-    uint256 _tallyMerkleRoot)
+    uint256 _tallyMerkleRoot,
+    uint256 _epoch)
     public
     isOwner
-    blockDoesNotExist(_blockHash)
     returns(bytes32)
   {
+    uint256 epoch = updateEpoch();
     // Hash of the elements of the votation
-    uint256 vote = uint256(sha256(abi.encodePacked(_blockHash, _drMerkleRoot,_tallyMerkleRoot)));
+    uint256 vote = uint256(sha256(abi.encodePacked(_blockHash, _drMerkleRoot,_tallyMerkleRoot, _epoch)));
     // add the block propose in candidates
     if (numberOfVotes[vote] == 0) {
       candidates.push(vote);
     }
+    emit Epoch(epoch);
+    emit Epoch(currentEpoch);
     numberOfVotes[vote] += 1;
-    if (numberOfVotes[vote] == numberOfVotes[winnerVote]) {
-      emit Tie("there is been a tie");
+    emit NumberVotes(numberOfVotes[vote]);
+    if (vote != winnerVote) {
+      if (numberOfVotes[vote] == numberOfVotes[winnerVote]) {
+        emit Tie("there is been a tie");
+        lastVote = vote;
+      }
+      if (numberOfVotes[vote] > numberOfVotes[winnerVote]) {
+        winnerVote = vote;
+        winnerId = _blockHash;
+        winnerDrMerkleRoot = _drMerkleRoot;
+        winnerTallyMerkleRoot = _tallyMerkleRoot;
+        winnerEpoch = _epoch;
     }
-    if (numberOfVotes[vote] > numberOfVotes[winnerVote]) {
-      winnerVote = vote;
-      winnerId = _blockHash;
-      winnerDrMerkleRoot = _drMerkleRoot;
-      winnerTallyMerkleRoot = _tallyMerkleRoot;
     }
-    finalResult();
-    //lastBlock.blockHash = winnerId;
-    //lastBlock.epoch = 0;
-    //postNewBlock(
-     // winnerId, currentEpoch, winnerDrMerkleRoot, winnerTallyMerkleRoot);
-    emit Winner(winnerId);
-    return bytes32(winnerId);
+
+    witnetEpoch = epoch;
+    endTime = witnetEpoch + 1 days;
+    emit Epoch(endTime);
+    return bytes32(vote);
   }
 
   /// @dev Post new block into the block relay
@@ -161,31 +178,51 @@ contract NewBlockRelay {
 
   /// @dev Read the beacon of the last block inserted
   /// @return bytes to be signed by bridge nodes
+  function getLastBlockHash()
+    public
+    view
+  returns(bytes memory)
+  {
+    //return abi.encodePacked(lastBlock.blockHash, lastBlock.epoch);
+    return abi.encodePacked(lastBlock.blockHash,uint256(1));
+  }
+
+  /// @dev Read the beacon of the last block inserted
+  /// @return bytes to be signed by bridge nodes
   function getLastBeacon()
     public
     view
   returns(bytes memory)
   {
+    //return abi.encodePacked(lastBlock.blockHash, lastBlock.epoch);
     return abi.encodePacked(lastBlock.blockHash, lastBlock.epoch);
   }
 
   /// @dev Post new block into the block relay
-  function finalResult() internal returns(uint256) {
-    uint256 witnetEpoch = upDateEpoch();
-    if (currentEpoch != witnetEpoch) {
-      postNewBlock(
-        winnerId,
-        currentEpoch,
-        winnerDrMerkleRoot,
-        winnerTallyMerkleRoot);
-      currentEpoch = witnetEpoch;
-      return winnerId;
+  function finalResult() public onlyAfterDate() returns(uint256) {
+    if (lastVote != winnerVote) {
+      if (numberOfVotes[lastVote] == numberOfVotes[winnerVote]) {
+        revert("There is been a tie");
     }
+    }
+    emit Epoch(currentEpoch);
+    emit Epoch(witnetEpoch);
+    postNewBlock(
+      winnerId,
+      winnerEpoch,
+      winnerDrMerkleRoot,
+      winnerTallyMerkleRoot);
+    currentEpoch = witnetEpoch;
+    winnerId = 0;
+    winnerVote = 0;
+    winnerId = 0;
+    winnerDrMerkleRoot = 0;
+    winnerTallyMerkleRoot = 0;
   }
 
   /// @dev Post new block into the block relay
-  function upDateEpoch() internal view returns(uint256) {
-    uint256 witnetEpoch = (block.timestamp - witnetGenesis)/90;
-    return witnetEpoch;
+  function updateEpoch() internal returns(uint256) {
+    currentEpoch = (block.timestamp - witnetGenesis)/90;
+    return currentEpoch;
   }
 }

@@ -16,31 +16,23 @@ contract NewBRTestHelper is NewBlockRelay {
   uint256 timestamp;
   uint256 witnetGenesis;
 
-  constructor (uint256 _witnetGenesis) NewBlockRelay(_witnetGenesis) public {}
+  constructor (uint256 _witnetGenesis, uint256 _epochSeconds) NewBlockRelay(_witnetGenesis, _epochSeconds) public {}
 
- /* function winner() public view returns (uint256) {
-
-  }*/
-
-
-  function upDateEpoch() public returns (uint256) {
-    uint256 currentEpoch = updateEpoch();
+  function updateEpoch() public view returns (uint256) {
     return currentEpoch;
   }
 
   // Sets the current epoch to be the next
   function nextEpoch() public {
     currentEpoch = currentEpoch + 1;
-    emit Epoch(currentEpoch);
-    emit Epoch(witnetEpoch);
   }
 
-  function setTimestamp(uint256 _timestamp) public returns (uint256) {
-    timestamp = _timestamp;
+  function setEpoch(uint256 _epoch) public returns (uint256) {
+    currentEpoch = _epoch;
   }
 
-  function getTimestamp() public view returns (uint256) {
-    return timestamp;
+  function finalresult() public returns (uint256) {
+    finalResult();
   }
 
   function confirmCandidate(uint256 _candidate) public view returns (bool) {
@@ -51,6 +43,4 @@ contract NewBRTestHelper is NewBlockRelay {
       return false;
     }
   }
-
-
 }

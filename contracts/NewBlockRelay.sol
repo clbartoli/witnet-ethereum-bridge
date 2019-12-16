@@ -33,7 +33,9 @@ contract NewBlockRelay {
 
   // The start of witnet to calculate after the current epoch
   uint256 witnetGenesis;
+  uint256 epochSeconds;
   uint256 witnetEpoch;
+  uint256 proposalEpoch;
 
   uint256 endTime;
   // Inicialize the current epoch
@@ -58,10 +60,11 @@ contract NewBlockRelay {
   event Epoch(uint256 _epoch);
   event NumberVotes(uint256 _num);
 
-  constructor(uint256 _witnetGenesis) public{
+  constructor(uint256 _witnetGenesis, uint256 _epochSeconds) public{
     // Only the contract deployer is able to push blocks
     witnet = msg.sender;
     witnetGenesis = _witnetGenesis;
+    epochSeconds = _epochSeconds;
   }
 
   // Only the owner should be able to push blocks
@@ -84,7 +87,24 @@ contract NewBlockRelay {
     require(currentEpoch > witnetEpoch, "Not valid epoch");
     _;
   }
-  
+  // Esures there is not been a tie
+  modifier noTie(){
+    require(lastVote != winnerVote && numberOfVotes[lastVote] < numberOfVotes[winnerVote], "no tie");
+    /*if (lastVote != winnerVote) {
+      numberOfVotes[lastVote] < numberOfVotes[winnerVote];
+      }*/
+    _;
+  }
+
+  modifier validEpoch(){
+    require(currentEpoch - 1 == proposalEpoch, "not valid Epoch");
+    _;
+  }
+
+  /// @dev Post new block into the block relay
+  function updateEpoch() public view returns(uint256) {
+    return (block.timestamp - witnetGenesis)/epochSeconds;
+  }
 
   /// @dev Post new block into the block relay
   /// @param _blockHash Hash of the block header
@@ -100,9 +120,31 @@ contract NewBlockRelay {
     isOwner
     returns(bytes32)
   {
-    uint256 epoch = updateEpoch();
+    currentEpoch = updateEpoch();
+    emit Epoch(currentEpoch);
+    if (proposalEpoch == 0) {
+      proposalEpoch = currentEpoch;
+    }
+    if (currentEpoch > proposalEpoch) {
+      finalResult();
+      // delete array
+      // Update the proposal epoch
+      proposalEpoch = currentEpoch;
+    }
+    //uint256 epoch = updateEpoch();
+    //emit Epoch(epoch);
+    // Check if the block proposed is for the previous epoch
+    if (currentEpoch - 1 != _epoch) {
+      revert("You are proposisng a block for a non valid epoch");
+    }
     // Hash of the elements of the votation
-    uint256 vote = uint256(sha256(abi.encodePacked(_blockHash, _drMerkleRoot,_tallyMerkleRoot, _epoch)));
+    uint256 vote = uint256(
+      sha256(
+        abi.encodePacked(
+      _blockHash,
+      _drMerkleRoot,
+      _tallyMerkleRoot,
+      _epoch)));
     // add the block propose in candidates
     if (numberOfVotes[vote] == 0) {
       candidates.push(vote);
@@ -125,9 +167,8 @@ contract NewBlockRelay {
     }
     }
 
-    witnetEpoch = epoch;
-    endTime = witnetEpoch + 1 days;
-    emit Epoch(endTime);
+    proposalEpoch = currentEpoch;
+
     return bytes32(vote);
   }
 
@@ -199,7 +240,7 @@ contract NewBlockRelay {
   }
 
   /// @dev Post new block into the block relay
-  function finalResult() public onlyAfterDate() returns(uint256) {
+  function finalResult() internal onlyAfterDate() returns(uint256) {
     if (lastVote != winnerVote) {
       if (numberOfVotes[lastVote] == numberOfVotes[winnerVote]) {
         revert("There is been a tie");
@@ -212,7 +253,7 @@ contract NewBlockRelay {
       winnerEpoch,
       winnerDrMerkleRoot,
       winnerTallyMerkleRoot);
-    currentEpoch = witnetEpoch;
+    //witnetEpoch = currentEpoch;
     winnerId = 0;
     winnerVote = 0;
     winnerId = 0;
@@ -220,9 +261,4 @@ contract NewBlockRelay {
     winnerTallyMerkleRoot = 0;
   }
 
-  /// @dev Post new block into the block relay
-  function updateEpoch() internal returns(uint256) {
-    currentEpoch = (block.timestamp - witnetGenesis)/90;
-    return currentEpoch;
-  }
 }

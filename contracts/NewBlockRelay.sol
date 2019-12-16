@@ -24,7 +24,7 @@ contract NewBlockRelay {
   // Array with the votes for the possible block
   uint256[] public candidates;
 
-  // Initializes the maximum block voted
+  // Initializes the block with the maximum number of votes
   uint256 winnerVote;
   uint256 winnerId = 0;
   uint256 winnerDrMerkleRoot = 0;
@@ -34,23 +34,25 @@ contract NewBlockRelay {
   // Needed for the constructor
   uint256 witnetGenesis;
   uint256 epochSeconds;
-  // initializes the current epoch and the epoch in which is valid to propose blocks
+
+  // Initializes the current epoch and the epoch in which it is valid to propose blocks
   uint256 currentEpoch;
   uint256 proposalEpoch;
-  // Initializes counting the tie votes
+
+  // Initializes the tied vote count
   uint256 tiedVote;
-
-
-  // maps the candidate with the number of votes recieved
-  mapping(uint256 => uint256) public numberOfVotes;
 
   // Last block reported
   Beacon public lastBlock;
 
- // map the hash of the block with the merkle roots
+
+  // Map a block proposed with the number of votes recieved
+  mapping(uint256 => uint256) public numberOfVotes;
+
+ // Map the hash of the block with the merkle roots
   mapping (uint256 => MerkleRoots) public blocks;
 
- // Emit an event when there is been a tie in the votation process
+ // Event emitted when there's been a tie in the votation process
   event Tie(string _tie);
   // Event emitted when a new block is posted to the contract
   event NewBlock(uint256 _blockhash);
@@ -80,8 +82,8 @@ contract NewBlockRelay {
     _;
   }
 
-// Ensures the epoch for which the block is been proposed is valid,
-// this means is one epoch before the current epoch
+// Ensures the epoch for which the block is been proposed is valid
+// Valid if it is one epoch before the current epoch
   modifier validEpoch(uint256 _epoch){
     currentEpoch = updateEpoch();
     if (proposalEpoch == 0) {
@@ -110,7 +112,7 @@ contract NewBlockRelay {
     validEpoch(_epoch)
     returns(bytes32)
   {
-    // Post new block after counting the votes if the proposal epoch is new
+    // Post new block if the proposal epoch has changed
     if (currentEpoch > proposalEpoch) {
       postNewBlock(
         winnerId,
@@ -128,13 +130,13 @@ contract NewBlockRelay {
       _epoch,
       _drMerkleRoot,
       _tallyMerkleRoot)));
-    // add the block proposed to candidates
+    // Add the block proposed to candidates
     if (numberOfVotes[vote] == 0) {
       candidates.push(vote);
     }
     // Sum one vote
     numberOfVotes[vote] += 1;
-    // check if there is a tie
+    // Check if there is a tie
     if (vote != winnerVote) {
       if (numberOfVotes[vote] == numberOfVotes[winnerVote]) {
         emit Tie("there is been a tie");
@@ -179,17 +181,6 @@ contract NewBlockRelay {
 
   /// @dev Read the beacon of the last block inserted
   /// @return bytes to be signed by bridge nodes
-  function getLastBlockHash()
-    public
-    view
-  returns(bytes memory)
-  {
-    //return abi.encodePacked(lastBlock.blockHash, lastBlock.epoch);
-    return abi.encodePacked(lastBlock.blockHash,uint256(1));
-  }
-
-  /// @dev Read the beacon of the last block inserted
-  /// @return bytes to be signed by bridge nodes
   function getLastBeacon()
     public
     view
@@ -197,6 +188,54 @@ contract NewBlockRelay {
   {
     //return abi.encodePacked(lastBlock.blockHash, lastBlock.epoch);
     return abi.encodePacked(lastBlock.blockHash, lastBlock.epoch);
+  }
+
+/// @dev Verifies the validity of a PoI against the DR merkle root
+  /// @param _poi the proof of inclusion as [sibling1, sibling2,..]
+  /// @param _blockHash the blockHash
+  /// @param _index the index in the merkle tree of the element to verify
+  /// @param _element the leaf to be verified
+  /// @return true or false depending the validity
+  function verifyDrPoi(
+    uint256[] memory _poi,
+    uint256 _blockHash,
+    uint256 _index,
+    uint256 _element)
+  public
+  view
+  blockExists(_blockHash)
+  returns(bool)
+  {
+    uint256 drMerkleRoot = blocks[_blockHash].drHashMerkleRoot;
+    return(verifyPoi(
+      _poi,
+      drMerkleRoot,
+      _index,
+      _element));
+  }
+
+  /// @dev Verifies the validity of a PoI against the tally merkle root
+  /// @param _poi the proof of inclusion as [sibling1, sibling2,..]
+  /// @param _blockHash the blockHash
+  /// @param _index the index in the merkle tree of the element to verify
+  /// @param _element the element
+  /// @return true or false depending the validity
+  function verifyTallyPoi(
+    uint256[] memory _poi,
+    uint256 _blockHash,
+    uint256 _index,
+    uint256 _element)
+  public
+  view
+  blockExists(_blockHash)
+  returns(bool)
+  {
+    uint256 tallyMerkleRoot = blocks[_blockHash].tallyHashMerkleRoot;
+    return(verifyPoi(
+      _poi,
+      tallyMerkleRoot,
+      _index,
+      _element));
   }
 
   /// @dev Post new block into the block relay
@@ -230,6 +269,34 @@ contract NewBlockRelay {
     for (uint i = 0; i <= candidates.length - 1; i++) {
       delete candidates[i];
     }
+  }
+
+  /// @dev Verifies the validity of a PoI
+  /// @param _poi the proof of inclusion as [sibling1, sibling2,..]
+  /// @param _root the merkle root
+  /// @param _index the index in the merkle tree of the element to verify
+  /// @param _element the leaf to be verified
+  /// @return true or false depending the validity
+  function verifyPoi(
+    uint256[] memory _poi,
+    uint256 _root,
+    uint256 _index,
+    uint256 _element)
+  private pure returns(bool)
+  {
+    uint256 tree = _element;
+    uint256 index = _index;
+    // We want to prove that the hash of the _poi and the _element is equal to _root
+    // For knowing if concatenate to the left or the right we check the parity of the the index
+    for (uint i = 0; i<_poi.length; i++) {
+      if (index%2 == 0) {
+        tree = uint256(sha256(abi.encodePacked(tree, _poi[i])));
+      } else {
+        tree = uint256(sha256(abi.encodePacked(_poi[i], tree)));
+      }
+      index = index>>1;
+    }
+    return _root==tree;
   }
 
 }

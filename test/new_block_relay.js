@@ -42,7 +42,7 @@ contract("New Block Relay", accounts => {
 
     it("should post a new block when proposing in next epoch", async () => {
       // the blockhash we want to propose
-      const vote = "0x" + sha.sha256("the vote to propose")
+      const vote1 = "0x" + sha.sha256("the vote to propose")
       const vote2 = "0x" + sha.sha256("second vote")
       const drMerkleRoot = 1
       const tallyMerkleRoot = 1
@@ -51,14 +51,14 @@ contract("New Block Relay", accounts => {
       await waitForHash(setEpoch)
       const epoch = await contest.updateEpoch.call()
       // Propose the vote to the Block Relay
-      const tx = contest.proposeBlock(vote, epoch - 1, drMerkleRoot, tallyMerkleRoot)
+      const tx = contest.proposeBlock(vote1, epoch - 1, drMerkleRoot, tallyMerkleRoot)
       await waitForHash(tx)
       // Wait unitl the next epoch
       await contest.nextEpoch()
       // Propose another block in the new epoch and so post the previous one
       contest.proposeBlock(vote2, epoch, drMerkleRoot, tallyMerkleRoot)
       // Concatenation of the blockhash and the epoch -1 to check later if it's equal to the last beacon
-      const concatenated = web3.utils.hexToBytes(vote).concat(
+      const concatenated = web3.utils.hexToBytes(vote1).concat(
         web3.utils.hexToBytes(
           web3.utils.padLeft(
             web3.utils.toHex(epoch - 1), 64

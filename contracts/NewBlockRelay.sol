@@ -24,54 +24,43 @@ contract NewBlockRelay {
   // Array with the votes for the possible block
   uint256[] public candidates;
 
-  // Inicialize the maximum block voted
+  // Initializes the maximum block voted
   uint256 winnerVote;
   uint256 winnerId = 0;
   uint256 winnerDrMerkleRoot = 0;
   uint256 winnerTallyMerkleRoot = 0;
   uint256 winnerEpoch = 0;
 
-  // The start of witnet to calculate after the current epoch
+  // Needed for the constructor
   uint256 witnetGenesis;
   uint256 epochSeconds;
-  uint256 witnetEpoch;
+  // initializes the current epoch and the epoch in which is valid to propose blocks
+  uint256 currentEpoch;
   uint256 proposalEpoch;
+  // Initializes counting the tie votes
+  uint256 tiedVote;
 
-  uint256 endTime;
-  // Inicialize the current epoch
-  uint256 currentEpoch=0;
-  uint256 lastVote;
 
   // maps the candidate with the number of votes recieved
   mapping(uint256 => uint256) public numberOfVotes;
 
-  // Address of the block pusher
-  address witnet;
   // Last block reported
   Beacon public lastBlock;
 
  // map the hash of the block with the merkle roots
   mapping (uint256 => MerkleRoots) public blocks;
 
-  // Event emitted when a new block is posted to the contract
-  event NewBlock(address indexed _from, uint256 _id);
-  event Winner(uint256 _winner);
+ // Emit an event when there is been a tie in the votation process
   event Tie(string _tie);
-  event Epoch(uint256 _epoch);
-  event NumberVotes(uint256 _num);
+  // Event emitted when a new block is posted to the contract
+  event NewBlock(uint256 _blockhash);
 
   constructor(uint256 _witnetGenesis, uint256 _epochSeconds) public{
-    // Only the contract deployer is able to push blocks
-    witnet = msg.sender;
+    // Set the first epoch in Witnet plus the epoch duration when deploying the contract
     witnetGenesis = _witnetGenesis;
     epochSeconds = _epochSeconds;
   }
 
-  // Only the owner should be able to push blocks
-  modifier isOwner() {
-    require(msg.sender == witnet, "Sender not authorized"); // If it is incorrect here, it reverts.
-    _; // Otherwise, it continues.
-  }
   // Ensures block exists
   modifier blockExists(uint256 _id){
     require(blocks[_id].drHashMerkleRoot!=0, "Non-existing block");
@@ -82,115 +71,86 @@ contract NewBlockRelay {
     require(blocks[_id].drHashMerkleRoot==0, "The block already existed");
     _;
   }
-  // Ensures the epoch is valid
-  modifier onlyAfterDate(){
-    require(currentEpoch > witnetEpoch, "Not valid epoch");
-    _;
-  }
+
   // Esures there is not been a tie
   modifier noTie(){
-    require(lastVote != winnerVote && numberOfVotes[lastVote] < numberOfVotes[winnerVote], "no tie");
-    /*if (lastVote != winnerVote) {
-      numberOfVotes[lastVote] < numberOfVotes[winnerVote];
-      }*/
+    if (tiedVote != winnerVote) {
+      require(numberOfVotes[tiedVote] < numberOfVotes[winnerVote], "There has been a tie");
+    }
     _;
   }
 
-  modifier validEpoch(){
-    require(currentEpoch - 1 == proposalEpoch, "not valid Epoch");
+// Ensures the epoch for which the block is been proposed is valid,
+// this means is one epoch before the current epoch
+  modifier validEpoch(uint256 _epoch){
+    currentEpoch = updateEpoch();
+    if (proposalEpoch == 0) {
+      proposalEpoch = currentEpoch;
+    }
+    require(currentEpoch - 1 == _epoch, "Proposing a block for a non valid epoch");
     _;
   }
 
-  /// @dev Post new block into the block relay
+  /// @dev Updates the epoch
   function updateEpoch() public view returns(uint256) {
     return (block.timestamp - witnetGenesis)/epochSeconds;
   }
 
-  /// @dev Post new block into the block relay
+  /// @dev Proposes a block into the block relay
   /// @param _blockHash Hash of the block header
+  /// @param _epoch Epoch for which the block is proposed
   /// @param _drMerkleRoot Merkle root belonging to the data requests
   /// @param _tallyMerkleRoot Merkle root belonging to the tallies
-  /// @param _epoch Epoch for which the block is proposed
   function proposeBlock(
     uint256 _blockHash,
+    uint256 _epoch,
     uint256 _drMerkleRoot,
-    uint256 _tallyMerkleRoot,
-    uint256 _epoch)
+    uint256 _tallyMerkleRoot)
     public
-    isOwner
+    validEpoch(_epoch)
     returns(bytes32)
   {
-    currentEpoch = updateEpoch();
-    emit Epoch(currentEpoch);
-    if (proposalEpoch == 0) {
-      proposalEpoch = currentEpoch;
-    }
+    // Post new block after counting the votes if the proposal epoch is new
     if (currentEpoch > proposalEpoch) {
-      finalResult();
-      // delete array
+      postNewBlock(
+        winnerId,
+        winnerEpoch,
+        winnerDrMerkleRoot,
+        winnerTallyMerkleRoot);
       // Update the proposal epoch
       proposalEpoch = currentEpoch;
-    }
-    //uint256 epoch = updateEpoch();
-    //emit Epoch(epoch);
-    // Check if the block proposed is for the previous epoch
-    if (currentEpoch - 1 != _epoch) {
-      revert("You are proposisng a block for a non valid epoch");
     }
     // Hash of the elements of the votation
     uint256 vote = uint256(
       sha256(
         abi.encodePacked(
       _blockHash,
+      _epoch,
       _drMerkleRoot,
-      _tallyMerkleRoot,
-      _epoch)));
-    // add the block propose in candidates
+      _tallyMerkleRoot)));
+    // add the block proposed to candidates
     if (numberOfVotes[vote] == 0) {
       candidates.push(vote);
     }
-    emit Epoch(epoch);
-    emit Epoch(currentEpoch);
+    // Sum one vote
     numberOfVotes[vote] += 1;
-    emit NumberVotes(numberOfVotes[vote]);
+    // check if there is a tie
     if (vote != winnerVote) {
       if (numberOfVotes[vote] == numberOfVotes[winnerVote]) {
         emit Tie("there is been a tie");
-        lastVote = vote;
+        tiedVote = vote;
       }
+      // Set as new winner if it has more votes
       if (numberOfVotes[vote] > numberOfVotes[winnerVote]) {
         winnerVote = vote;
         winnerId = _blockHash;
+        winnerEpoch = _epoch;
         winnerDrMerkleRoot = _drMerkleRoot;
         winnerTallyMerkleRoot = _tallyMerkleRoot;
-        winnerEpoch = _epoch;
     }
     }
-
-    proposalEpoch = currentEpoch;
 
     return bytes32(vote);
-  }
-
-  /// @dev Post new block into the block relay
-  /// @param _blockHash Hash of the block header
-  /// @param _epoch Witnet epoch to which the block belongs to
-  /// @param _drMerkleRoot Merkle root belonging to the data requests
-  /// @param _tallyMerkleRoot Merkle root belonging to the tallies
-  function postNewBlock(
-    uint256 _blockHash,
-    uint256 _epoch,
-    uint256 _drMerkleRoot,
-    uint256 _tallyMerkleRoot)
-    public
-    isOwner
-    blockDoesNotExist(_blockHash)
-  {
-    uint256 id = _blockHash;
-    lastBlock.blockHash = id;
-    lastBlock.epoch = _epoch;
-    blocks[id].drHashMerkleRoot = _drMerkleRoot;
-    blocks[id].tallyHashMerkleRoot = _tallyMerkleRoot;
   }
 
   /// @dev Retrieve the requests-only merkle root hash that was reported for a specific block header.
@@ -240,25 +200,36 @@ contract NewBlockRelay {
   }
 
   /// @dev Post new block into the block relay
-  function finalResult() internal onlyAfterDate() returns(uint256) {
-    if (lastVote != winnerVote) {
-      if (numberOfVotes[lastVote] == numberOfVotes[winnerVote]) {
-        revert("There is been a tie");
-    }
-    }
-    emit Epoch(currentEpoch);
-    emit Epoch(witnetEpoch);
-    postNewBlock(
-      winnerId,
-      winnerEpoch,
-      winnerDrMerkleRoot,
-      winnerTallyMerkleRoot);
-    //witnetEpoch = currentEpoch;
+  /// @param _blockHash Hash of the block header
+  /// @param _epoch Witnet epoch to which the block belongs to
+  /// @param _drMerkleRoot Merkle root belonging to the data requests
+  /// @param _tallyMerkleRoot Merkle root belonging to the tallies
+  function postNewBlock(
+    uint256 _blockHash,
+    uint256 _epoch,
+    uint256 _drMerkleRoot,
+    uint256 _tallyMerkleRoot)
+    internal
+    noTie()
+    blockDoesNotExist(_blockHash)
+  {
+    uint256 id = _blockHash;
+    lastBlock.blockHash = id;
+    lastBlock.epoch = _epoch;
+    blocks[id].drHashMerkleRoot = _drMerkleRoot;
+    blocks[id].tallyHashMerkleRoot = _tallyMerkleRoot;
+    emit NewBlock(id);
+    // Set the winner values equal 0
     winnerId = 0;
     winnerVote = 0;
     winnerId = 0;
+    winnerEpoch = 0;
     winnerDrMerkleRoot = 0;
     winnerTallyMerkleRoot = 0;
+    // Delete the condidates array so its empty for next epoch
+    for (uint i = 0; i <= candidates.length - 1; i++) {
+      delete candidates[i];
+    }
   }
 
 }

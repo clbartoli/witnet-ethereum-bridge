@@ -32,15 +32,15 @@ contract NewBRTestHelper is NewBlockRelay {
   }
 
   function finalresult() public returns (uint256) {
-    finalResult();
+    postNewBlock(
+      winnerId,
+      winnerEpoch,
+      winnerDrMerkleRoot,
+      winnerTallyMerkleRoot);
   }
 
-  function confirmCandidate(uint256 _candidate) public view returns (bool) {
-    //bytes memory candidate = abi.encodePacked(_candidate,uint256(1));
-    if (numberOfVotes[_candidate] != 0) {
-      return true;
-    } else {
-      return false;
-    }
+  function getCandidates() public view returns (uint256) {
+    uint256 candidate = candidates[0];
+    return candidate;
   }
 }

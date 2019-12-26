@@ -1,12 +1,18 @@
 pragma solidity ^0.5.0;
 
+import "./ActiveBridgeSetLib.sol";
+import "./WitnetBridgeInterface.sol";
+
 
 /**
  * @title New Block relay contract
  * @notice Contract to store/read block headers from the Witnet network
  * @author Witnet Foundation
  */
-contract NewBlockRelay {
+contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
+
+  using ActiveBridgeSetLib for ActiveBridgeSetLib.ActiveBridgeSet;
+  // WitnetBridgeInterface wbi = new WitnetBridgeInterface(address(this), 2);
 
   struct MerkleRoots {
     // hash of the merkle root of the DRs in Witnet
@@ -19,6 +25,16 @@ contract NewBlockRelay {
     uint256 blockHash;
     // epoch of the last block
     uint256 epoch;
+  }
+
+  //address[] abs = getABS(currentEpoch);
+  
+  // Struct for the candidates for final block
+  struct Candidates {
+    uint256[] candidate;
+    uint256 winner;
+    uint256 numberVotesWinner;
+
   }
 
   // Array with the votes for the possible block
@@ -34,6 +50,7 @@ contract NewBlockRelay {
   // Needed for the constructor
   uint256 witnetGenesis;
   uint256 epochSeconds;
+  string epochStatus = "Finalized";
 
   // Initializes the current epoch and the epoch in which it is valid to propose blocks
   uint256 currentEpoch;
@@ -42,8 +59,12 @@ contract NewBlockRelay {
   // Initializes the tied vote count
   uint256 tiedVote;
 
+  uint256 activeIdentities = abs.activeIdentities;
+
   // Last block reported
   Beacon public lastBlock;
+
+  Candidates public winnerProposal;
 
 
   // Map a block proposed with the number of votes recieved
@@ -52,10 +73,18 @@ contract NewBlockRelay {
  // Map the hash of the block with the merkle roots
   mapping (uint256 => MerkleRoots) public blocks;
 
+  // Map an epoch with the candidates for final block for that epoch
+  mapping(uint256 => Candidates) internal epochCandidates;
+
+
  // Event emitted when there's been a tie in the votation process
   event Tie(string _tie);
   // Event emitted when a new block is posted to the contract
   event NewBlock(uint256 _blockhash);
+  event Winner(uint256 _winner);
+
+  event Abs(address[] _absIdentities);
+  event AbsNumberElements(uint256 _numberElements);
 
   constructor(uint256 _witnetGenesis, uint256 _epochSeconds) public{
     // Set the first epoch in Witnet plus the epoch duration when deploying the contract
@@ -82,6 +111,19 @@ contract NewBlockRelay {
     _;
   }
 
+   // Ensures the maximum is achieved with at least 2/3 of the ABS
+  modifier minNumberVotes(uint256 _blockHash, uint256 _epoch, uint256 _drMerkleRoot, uint256 _tallyMerkleRoot){
+    uint256 vote = uint256(
+      sha256(
+        abi.encodePacked(
+      _blockHash,
+      _epoch,
+      _drMerkleRoot,
+      _tallyMerkleRoot)));
+    require(3*numberOfVotes[vote] >= 2*activeIdentities, "Not achieved the minimum number of votes");
+    _;
+  }
+
 // Ensures the epoch for which the block is been proposed is valid
 // Valid if it is one epoch before the current epoch
   modifier validEpoch(uint256 _epoch){
@@ -92,6 +134,12 @@ contract NewBlockRelay {
     require(currentEpoch - 1 == _epoch, "Proposing a block for a non valid epoch");
     _;
   }
+
+   // Ensures block does not exist
+  /*modifier blockDoesNotExist(uint256 _id){
+    require(blocks[_id].drHashMerkleRoot==0, "The block already existed");
+    _;
+  }*/
 
   /// @dev Updates the epoch
   function updateEpoch() public view returns(uint256) {
@@ -112,6 +160,10 @@ contract NewBlockRelay {
     validEpoch(_epoch)
     returns(bytes32)
   {
+    address[] memory absIdentities = getABS(_epoch);
+    emit Abs(absIdentities);
+    uint256 activeIdentities = abs.activeIdentities;
+    emit AbsNumberElements(activeIdentities);
     // Post new block if the proposal epoch has changed
     if (currentEpoch > proposalEpoch) {
       postNewBlock(
@@ -133,6 +185,9 @@ contract NewBlockRelay {
     // Add the block proposed to candidates
     if (numberOfVotes[vote] == 0) {
       candidates.push(vote);
+      // Candidates memory winnerProposal;
+      // winnerProposal.candidate = candidates;
+      // epochCandidates[proposalEpoch] = winnerProposal;
     }
     // Sum one vote
     numberOfVotes[vote] += 1;
@@ -150,6 +205,12 @@ contract NewBlockRelay {
         winnerDrMerkleRoot = _drMerkleRoot;
         winnerTallyMerkleRoot = _tallyMerkleRoot;
     }
+    //Candidates memory winnerProposal;
+    winnerProposal.candidate = candidates;
+    winnerProposal.winner = winnerId;
+    winnerProposal.numberVotesWinner = numberOfVotes[winnerVote];
+    epochCandidates[proposalEpoch] = winnerProposal;
+    emit Winner(winnerProposal.winner);
     }
 
     return bytes32(vote);
@@ -239,7 +300,7 @@ contract NewBlockRelay {
   }
 
   /// @dev Post new block into the block relay
-  /// @param _blockHash Hash of the block header
+  /// @param _blockHash Hash of the block headerPost
   /// @param _epoch Witnet epoch to which the block belongs to
   /// @param _drMerkleRoot Merkle root belonging to the data requests
   /// @param _tallyMerkleRoot Merkle root belonging to the tallies
@@ -250,8 +311,13 @@ contract NewBlockRelay {
     uint256 _tallyMerkleRoot)
     internal
     noTie()
+    minNumberVotes(_blockHash, _epoch, _drMerkleRoot, _tallyMerkleRoot)
     blockDoesNotExist(_blockHash)
   {
+    if (tiedVote != winnerVote && numberOfVotes[tiedVote] == numberOfVotes[winnerVote]) {
+      epochStatus = "Pending";
+      //uint256[] votes = epochCandidates[currentEpoch -1];
+    } else {
     uint256 id = _blockHash;
     lastBlock.blockHash = id;
     lastBlock.epoch = _epoch;
@@ -269,6 +335,7 @@ contract NewBlockRelay {
     for (uint i = 0; i <= candidates.length - 1; i++) {
       delete candidates[i];
     }
+  }
   }
 
   /// @dev Verifies the validity of a PoI

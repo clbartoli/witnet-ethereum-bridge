@@ -16,10 +16,11 @@ contract NewBRTestHelper is NewBlockRelay {
   NewBlockRelay br;
   uint256 timestamp;
   uint256 witnetGenesis;
+  uint256 firstBlock;
 
   using ActiveBridgeSetLib for ActiveBridgeSetLib.ActiveBridgeSet;
 
-  constructor (uint256 _witnetGenesis, uint256 _epochSeconds) NewBlockRelay(_witnetGenesis, _epochSeconds) public {}
+  constructor (uint256 _witnetGenesis, uint256 _epochSeconds, uint256 _firstBlock) NewBlockRelay(_witnetGenesis, _epochSeconds, _firstBlock) public {}
 
   event Winner(uint256 _winner);
   event EpochStatus(string _epochStatus);
@@ -56,13 +57,39 @@ contract NewBRTestHelper is NewBlockRelay {
     activeIdentities = _identitiesNumber;
   }
 
-  function finalresult(uint256 _previousHash) public returns (uint256) {
+  /*function finalresult(uint256 _previousHash) public returns (uint256) {
     postNewBlock(
       winnerId,
       winnerEpoch,
       winnerDrMerkleRoot,
       winnerTallyMerkleRoot,
       _previousHash);
+  }*/
+
+  function getVote(
+    uint256 _blockHash,
+    uint256 _epoch,
+    uint256 _drMerkleRoot,
+    uint256 _tallyMerkleRoot,
+    uint256 _previousVote) public returns(uint256)
+    {
+    uint256 vote = uint256(
+      sha256(
+        abi.encodePacked(
+      _blockHash,
+      _epoch,
+      _drMerkleRoot,
+      _tallyMerkleRoot,
+      _previousVote)));
+
+    return vote;
+
+  }
+
+  function getBlockHash(uint256 _epoch) public view returns (uint256) {
+    uint256 vote = epochVote[_epoch];
+    uint256 blockHash = voteHashes[vote].blockHash;
+    return blockHash;
   }
 
   function getCandidates() public view returns (uint256) {

@@ -2,6 +2,7 @@ pragma solidity ^0.5.0;
 pragma experimental ABIEncoderV2;
 
 import "../../contracts/NewBlockRelay.sol";
+import "../../contracts/ActiveBridgeSetLib.sol";
 
 /**
  * @title Test Helper for the new block Relay contract
@@ -16,11 +17,27 @@ contract NewBRTestHelper is NewBlockRelay {
   uint256 timestamp;
   uint256 witnetGenesis;
 
+  using ActiveBridgeSetLib for ActiveBridgeSetLib.ActiveBridgeSet;
+
   constructor (uint256 _witnetGenesis, uint256 _epochSeconds) NewBlockRelay(_witnetGenesis, _epochSeconds) public {}
 
   event Winner(uint256 _winner);
   event EpochStatus(string _epochStatus);
 
+
+  // Addresses to be added to the ABS
+  address[] addresses = [
+    address(0x01),
+    address(0x02),
+    address(0x03),
+    address(0x04)
+  ];
+
+  function pushActivity(uint256 _blockNumber) public {
+    //_blockNumber = block.number;
+    address _address = msg.sender;
+    abs.pushActivity(_address, _blockNumber);
+  }
 
   function updateEpoch() public view returns (uint256) {
     return currentEpoch;
@@ -59,7 +76,16 @@ contract NewBRTestHelper is NewBlockRelay {
 
   function checkStatusPending() public returns (bool) {
     string memory pending = "Pending";
-    if (keccak256(abi.encodePacked((epochStatus))) == keccak256(abi.encodePacked((pending)))) {
+    //emit EpochStatus(epochStatus[currentEpoch-2])
+    if (keccak256(abi.encodePacked((epochStatus[currentEpoch-2]))) == keccak256(abi.encodePacked((pending)))) {
+      return true;
+    }
+  }
+
+  function checkStatusFinalized() public returns (bool) {
+    string memory finalized = "Finalized";
+    //emit EpochStatus(epochStatus[currentEpoch-2])
+    if (keccak256(abi.encodePacked((epochStatus[currentEpoch-2]))) == keccak256(abi.encodePacked((finalized)))) {
       return true;
     }
   }

@@ -106,7 +106,7 @@ contract("New Block Relay", accounts => {
       assert.equal(beacon, web3.utils.bytesToHex(concatenated))
     })
 
-    it("should revert if not achieved 2/3 of the ABS", async () => {
+    /*it("should revert if not achieved 2/3 of the ABS", async () => {
       // the blockhash we want to propose
       const vote = "0x" + sha.sha256("the vote to propose")
       const drMerkleRoot = 1
@@ -124,6 +124,36 @@ contract("New Block Relay", accounts => {
       await contest.nextEpoch()
       // Call the Final Result
       //await contest.finalresult()
+      // Concatenation of the blockhash and the epoch-1 to check later if it's equal to the last beacon.blockHash
+      const concatenated = web3.utils.hexToBytes(vote).concat(
+        web3.utils.hexToBytes(
+          web3.utils.padLeft(
+            web3.utils.toHex(epoch - 1), 64
+          )
+        )
+      )
+      // Should revert when posting a new block becouse the winning vote has only recieved 1 vote but there 3 members of the ABS
+      await truffleAssert.reverts(contest.finalresult(0), "Not achieved the minimum number of votes")
+    })*/
+
+    it("should set the previos block to pending when not achieved 2/3 of the ABS", async () => {
+      // the blockhash we want to propose
+      const vote = "0x" + sha.sha256("the vote to propose")
+      const drMerkleRoot = 1
+      const tallyMerkleRoot = 1
+      // Fix the timestamp in witnet to be 89159
+      const setEpoch = contest.setEpoch(89159)
+      await waitForHash(setEpoch)
+      const epoch = await contest.updateEpoch.call()
+      // Set the abs to have 3 identities
+      await contest.setAbsIdentities(3)
+      // Propose the vote to the Block Relay
+      const tx = contest.proposeBlock(vote, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
+      await waitForHash(tx)
+      // Wait unitl the next epoch to get the final result
+      await contest.nextEpoch()
+      // Call the Final Result
+      await contest.finalresult(0)
       /*// Concatenation of the blockhash and the epoch-1 to check later if it's equal to the last beacon.blockHash
       const concatenated = web3.utils.hexToBytes(vote).concat(
         web3.utils.hexToBytes(
@@ -132,17 +162,19 @@ contract("New Block Relay", accounts => {
           )
         )
       )*/
-      // Should revert when posting a new block becouse the winning vote has only recieved 1 vote but there 3 members of the ABS
-      await truffleAssert.reverts(contest.finalresult(0), "Not achieved the minimum number of votes")
+      const epochStatus = await contest.checkStatusPending.call()
+      assert.equal(epochStatus, true)
     })
 
-    it("should detect there has been a tie and revert the post", async () => {
+
+    it("should detect there has been a tie and just set the epochStatus equal Pending", async () => {
       // There are two blocks proposed once
       const vote1 = "0x" + sha.sha256("first vote")
       const vote2 = "0x" + sha.sha256("second vote")
       const drMerkleRoot = 1
       const drMerkleRoot2 = 2
       const tallyMerkleRoot = 1
+      await contest.setAbsIdentities(3)
       // Fix the timestamp in witnet to be 89159
       const setEpoch = contest.setEpoch(89159)
       await waitForHash(setEpoch)
@@ -160,6 +192,35 @@ contract("New Block Relay", accounts => {
       assert.equal(epochStatus, true)
       // It reverts the finalResult() since it detects there is been a tie
       // await truffleAssert.reverts(contest.finalresult(), "There has been a tie")
+    })
+
+    it("should detect there has been a tie and just set the epochStatus equal Pending", async () => {
+      // There are two blocks proposed once
+      const vote1 = "0x" + sha.sha256("first vote")
+      const vote2 = "0x" + sha.sha256("second vote")
+      const drMerkleRoot = 1
+      const drMerkleRoot2 = 2
+      const tallyMerkleRoot = 1
+      await contest.setAbsIdentities(3)
+      // Fix the timestamp in witnet to be 89159
+      const setEpoch = contest.setEpoch(89159)
+      await waitForHash(setEpoch)
+      const epoch = await contest.updateEpoch.call()
+      // Propose block1 to the Block Relay
+      const tx1 = contest.proposeBlock(vote1, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
+      await waitForHash(tx1)
+      // Propose block2 to the Block Relay
+      const tx2 = contest.proposeBlock(vote2, epoch - 1, drMerkleRoot2, tallyMerkleRoot, 0)
+      await waitForHash(tx2)
+      // Let's wait unitl the next epoch so we can get the final result
+      await contest.nextEpoch()
+      await contest.finalresult(0)
+      contest.proposeBlock(vote2, epoch, drMerkleRoot2, tallyMerkleRoot, vote2)
+      contest.proposeBlock(vote2, epoch, drMerkleRoot2, tallyMerkleRoot, vote2)
+      contest.proposeBlock(vote2, epoch, drMerkleRoot2, tallyMerkleRoot, vote2)
+      await contest.nextEpoch()
+      await contest.finalresult(vote2)
+
     })
 
     it("should revert because the block proposed is not for a valid epoch", async () => {

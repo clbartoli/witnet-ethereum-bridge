@@ -54,7 +54,6 @@ contract NewBRTestHelper is NewBlockRelay {
   }
 
   function winnerProposed(uint256 _epoch) public returns (uint256) {
-    emit Winner(epochCandidates[_epoch].winner);
     return epochCandidates[_epoch].winner;
   }
 

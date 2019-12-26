@@ -39,12 +39,13 @@ contract NewBRTestHelper is NewBlockRelay {
     activeIdentities = _identitiesNumber;
   }
 
-  function finalresult() public returns (uint256) {
+  function finalresult(uint256 _previousHash) public returns (uint256) {
     postNewBlock(
       winnerId,
       winnerEpoch,
       winnerDrMerkleRoot,
-      winnerTallyMerkleRoot);
+      winnerTallyMerkleRoot,
+      _previousHash);
   }
 
   function getCandidates() public view returns (uint256) {

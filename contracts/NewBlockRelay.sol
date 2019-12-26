@@ -52,6 +52,9 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
   // Array with the votes for the possible block
   uint256[] public candidates;
 
+  // Definde epoch status to know if it is needed to vote for the previous epoch
+   string epochStatus = "Finalized";
+
   // Initializes the block with the maximum number of votes
   uint256 winnerVote;
   uint256 winnerId = 0;
@@ -239,6 +242,9 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
     absMembership(msg.sender)
     returns(bytes32)
   {
+    // Check the epochStatus
+    // Set the epoch to pending
+    
     address[] memory absIdentities = getABS(_epoch);
     //emit Abs(absIdentities);
     //uint256 activeIdentities = abs.activeIdentities;

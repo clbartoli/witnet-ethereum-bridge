@@ -47,10 +47,13 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
     uint256 merkleRoot;
     uint256 tally;
     uint256 previousVote;
+    string status;
   }
 
   // Array with the votes for the possible block
   uint256[] public candidates;
+
+
 
   // Initializes the block with the maximum number of votes
   uint256 winnerVote;
@@ -80,6 +83,10 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
 
   Hashes public hashes; 
 
+  struct FinalizedBlock {
+    Hashes winningVote;
+    string status;
+  }
 
   // Map a block proposed with the number of votes recieved
   mapping(uint256 => uint256) public numberOfVotes;
@@ -100,6 +107,8 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
   // Mapping from an epoch to the blockHash once finalized
   mapping(uint256 => uint256) internal epochVote;
 
+  mapping(uint256 => FinalizedBlock) internal epochFinalizedBlock;
+
 
  // Event emitted when there's been a tie in the votation process
   event Tie(string _tie);
@@ -107,6 +116,8 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
   event NewBlock(uint256 _blockhash);
   event Winner(uint256 _winner);
   event PreviousVote(uint256 _previousVote);
+  event Votepushed(uint256 Votepushed);
+
 
   event Abs(address[] _absIdentities);
   event AbsNumberElements(uint256 _numberElements);
@@ -239,49 +250,34 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
     absMembership(msg.sender)
     returns(bytes32)
   {
-    address[] memory absIdentities = getABS(_epoch);
+    // Check the epochStatus
+    // Set the epoch to pending
+    
+    //address[] memory absIdentities = getABS(_epoch);
     //emit Abs(absIdentities);
     //uint256 activeIdentities = abs.activeIdentities;
     // emit AbsNumberElements(activeIdentities);
-     uint256 vote = uint256(
-      sha256(
-        abi.encodePacked(
-      _blockHash,
-      _epoch,
-      _drMerkleRoot,
-      _tallyMerkleRoot,
-      _previousVote)));
-     // emit Winner(vote);
-    // Add the block proposed to candidates
-    if (numberOfVotes[vote] == 0) {
-      candidates.push(vote);
-      //Hashes memory voteHash;
-      /*blocks[_blockHash].drHashMerkleRoot = _drMerkleRoot;
-      blocks[_blockHash].tallyHashMerkleRoot = _tallyMerkleRoot;
-      blocks[_blockHash].previousBlockHash = _previousVote;*/
-      voteHashes[vote].blockHash = _blockHash;
-      voteHashes[vote].merkleRoot = _drMerkleRoot;
-      voteHashes[vote].tally = _tallyMerkleRoot;
-      voteHashes[vote].previousVote = _previousVote;
-      // Candidates memory winnerProposal;
-      // winnerProposal.candidate = candidates;
-      // epochCandidates[proposalEpoch] = winnerProposal;
-    }
+    
+    
     // Post new block if the proposal epoch has changed
     if (currentEpoch > proposalEpoch) {
+      emit Votepushed(voteHashes[winnerVote].previousVote);
+
       postNewBlock(
+        winnerVote,
         winnerId,
         winnerEpoch,
         winnerDrMerkleRoot,
         winnerTallyMerkleRoot,
-        _previousVote);
+        voteHashes[winnerVote].previousVote);
       // Update the proposal epoch
       proposalEpoch = currentEpoch;
     }
+    
     string memory _epochStatus = epochStatus[_epoch-1];
-      emit EpochStatus(_epochStatus);
+      // emit EpochStatus(_epochStatus);
     // Hash of the elements of the votation
-    /*uint256 vote = uint256(
+    uint256 vote = uint256(
       sha256(
         abi.encodePacked(
       _blockHash,
@@ -293,18 +289,23 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
     // Add the block proposed to candidates
     if (numberOfVotes[vote] == 0) {
       candidates.push(vote);
+      //emit Winner(vote);
+      //emit PreviousVote(candidates[candidates.length-1]);
       //Hashes memory voteHash;
       /*blocks[_blockHash].drHashMerkleRoot = _drMerkleRoot;
       blocks[_blockHash].tallyHashMerkleRoot = _tallyMerkleRoot;
       blocks[_blockHash].previousBlockHash = _previousVote;*/
-      /*voteHashes[vote].blockHash = _blockHash;
+
+      voteHashes[vote].blockHash = _blockHash;
       voteHashes[vote].merkleRoot = _drMerkleRoot;
       voteHashes[vote].tally = _tallyMerkleRoot;
       voteHashes[vote].previousVote = _previousVote;
+
       // Candidates memory winnerProposal;
       // winnerProposal.candidate = candidates;
       // epochCandidates[proposalEpoch] = winnerProposal;
-    }*/
+    }
+    
     // Sum one vote
     numberOfVotes[vote] += 1;
     // Check if there is a tie
@@ -320,12 +321,19 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
         winnerEpoch = _epoch;
         winnerDrMerkleRoot = _drMerkleRoot;
         winnerTallyMerkleRoot = _tallyMerkleRoot;
+
         // voteHashes[winnerVote].blockHash = _blockHash;
         // voteHashes[winnerVote].merkleRoot = _drMerkleRoot;
         // voteHashes[winnerVote].tally = _tallyMerkleRoot;
         // voteHashes[winnerVote].previousVote = _previousVote;
 
     }
+    emit Winner(vote);
+        emit Winner(voteHashes[vote].blockHash);
+
+    //emit PreviousVote(voteHashes[winnerVote].blockHash);
+    //emit PreviousVote(epochFinalizedBlock[_epoch-1].winningVote.previousVote);
+    //emit PreviousVote(voteHashes[vote].tally);
     //Candidates memory winnerProposal;
     /*winnerProposal.candidate = candidates;
     winnerProposal.winner = winnerId;
@@ -423,13 +431,14 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
       _element));
 
   }
-
+  
   /// @dev Post new block into the block relay
   /// @param _blockHash Hash of the block headerPost
   /// @param _epoch Witnet epoch to which the block belongs to
   /// @param _drMerkleRoot Merkle root belonging to the data requests
   /// @param _tallyMerkleRoot Merkle root belonging to the tallies
   function postNewBlock(
+    uint256 _vote,
     uint256 _blockHash,
     uint256 _epoch,
     uint256 _drMerkleRoot,
@@ -440,22 +449,19 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
     // minNumberVotes(_blockHash, _epoch, _drMerkleRoot, _tallyMerkleRoot)
     //blockDoesNotExist(_blockHash)
   {
-    uint256 vote = uint256(
-      sha256(
-        abi.encodePacked(
-      _blockHash,
-      _epoch,
-      _drMerkleRoot,
-      _tallyMerkleRoot,
-      _previousVote)));
+      //if (candidates.length != 1) {
+      //emit PreviousVote(candidates[candidates.length-1]);
+      //}
+      emit NumberOfVotes(numberOfVotes[_vote]);
+      //emit NumberOfVotes(numberOfVotes[winnerVote]);
       string memory _epochStatus = epochStatus[_epoch-3];
-      emit EpochStatus(_epochStatus);
+      //emit EpochStatus(_epochStatus);
       //emit PreviousVote(_previousVote);
      if (3*numberOfVotes[winnerVote] < 2*activeIdentities) {
       // emit NumberOfVotes(numberOfVotes[vote]);
         epochStatus[_epoch] = "Pending";
         // epochBlockHash[_epoch] = _blockHash;
-        //revert();
+        //revert();y
         winnerId = 0;
         winnerVote = 0;
         winnerId = 0;
@@ -465,8 +471,12 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
       } 
       else {
         // Map the _blockHash to the _epoch
-        epochVote[_epoch] = vote;
-        emit Winner(voteHashes[vote].blockHash);
+        epochVote[_epoch] = _vote;
+
+        epochFinalizedBlock[_epoch].winningVote = voteHashes[_vote];
+        epochFinalizedBlock[_epoch].winningVote.status = "Accepted";
+        epochFinalizedBlock[_epoch].status = "Finalized";
+        // emit Winner(voteHashes[vote].blockHash);
         // Check if the status of the previous block is Pending and so it needs to be finalized
         if (keccak256(abi.encodePacked((epochStatus[_epoch-1]))) == keccak256(abi.encodePacked(("Pending")))){
        // Vote for the previous epoch
@@ -474,19 +484,30 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
         //emit Winner(lastBlock.blockHash);
        uint x;
         // Select the last Finalized epoch
-        for (uint i; i > 1; i++) {
-          if (keccak256(abi.encodePacked((epochStatus[_epoch-i]))) == keccak256(abi.encodePacked(("Pending")))) {
+
+        for (uint i; i>=0; i++) {
+
+
+
+          if (keccak256(abi.encodePacked((epochStatus[_epoch-i-1]))) == keccak256(abi.encodePacked(("Pending")))) {
           x = i;
-          epochVote[_epoch - i] = voteHashes[epochVote[_epoch]].previousVote;
-          continue;
+
+
+          epochVote[_epoch - i -1] = voteHashes[epochVote[_epoch - i]].previousVote;
+
+          //epochFinalizedBlock[_epoch - 1].winningVote = voteHashes[previousVote];
+          uint256 previousFinalVote;
+          previousFinalVote =  epochVote[_epoch - i -1];
+          epochFinalizedBlock[_epoch - i-1].winningVote.blockHash = voteHashes[previousFinalVote].blockHash;
+
+          epochFinalizedBlock[_epoch-i-1].status = "Finalized";
           } else if (keccak256(abi.encodePacked((epochStatus[_epoch-i]))) == keccak256(abi.encodePacked(("Finalized")))) {
           //return i;
           break;
           }
         }
-        uint256 prev = voteHashes[_previousVote].previousVote;
         // For each epoch that was Pending add the correponding blockHash
-        emit Winner(epochVote[_epoch-1]);
+        //emit Winner(epochVote[_epoch-1]);
         // Post each block, from the oldest to the newest and setting the epochs status to Finalized
        for (uint j; j <= x; j++) {
         uint256 voteValid = epochVote[_epoch - x + j];
@@ -505,7 +526,7 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
     blocks[id].drHashMerkleRoot = _drMerkleRoot;
     blocks[id].tallyHashMerkleRoot = _tallyMerkleRoot;
     epochStatus[_epoch] = "Finalized";
-    emit NewBlock(id);
+    emit NewBlock(_vote);
     // Set the winner values equal 0
     winnerId = 0;
     winnerVote = 0;
@@ -513,73 +534,21 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
     winnerEpoch = 0;
     winnerDrMerkleRoot = 0;
     winnerTallyMerkleRoot = 0;
+    
     // Delete the condidates array so its empty for next epoch
     for (uint i = 0; i <= candidates.length - 1; i++) {
-      delete candidates[i];
-    }
+      delete voteHashes[candidates[i]];}
+    delete candidates;
+    emit PreviousVote(epochFinalizedBlock[89160].winningVote.blockHash);
+    
+    emit EpochStatus(epochFinalizedBlock[_epoch-1].winningVote.status);
   
     //epochVote[_epoch] = _blockHash; 
   }
   }
-  
 
   
-  /*function recountVotes(uint256 _vote)
-    internal
-    // noTie()
-    //minNumberVotes(_blockHash, _epoch, _drMerkleRoot, _tallyMerkleRoot)
-    //blockDoesNotExist(_blockHash)
-  {
-    uint256 blockHash = _vote;
-    uint256 merkleRoot = blocks[blockHash].drHashMerkleRoot;
-    uint256 tally = blocks[blockHash].tallyHashMerkleRoot;
-    uint256 previousBlockHash = blocks[blockHash].previousBlockHash;
-    /*uint256 vote = uint256(
-      sha256(
-        abi.encodePacked(
-      _blockHash,
-      _epoch,
-      _drMerkleRoot,
-      _tallyMerkleRoot)));*/
-    // numerOfVotes[vote] +=1;
-    //proposeBlock(blockHash, currentEpoch - 1, merkleRoot, tally, previousBlockHash);
-    /*epochCandidates[currentEpoch -1];
-    uint256 winnerCandidate = epochCandidates[currentEpoch -1].winner;
-    if (numberOfVotes[_vote] == 0) {
-      epochCandidates[currentEpoch -1].candidate.push(_vote);
-      // Candidates memory winnerProposal;
-      // winnerProposal.candidate = candidates;
-      // epochCandidates[proposalEpoch] = winnerProposal;
-    }
-    // Sum one vote
-    numberOfVotes[_vote] += 1;
-    // Check if there is a tie
-    if (_vote != winnerCandidate) {
-      if (numberOfVotes[_vote] == numberOfVotes[winnerCandidate]) {
-        emit Tie("there is been a tie");
-        tiedVote = _vote;
-      }
-      // Set as new winner if it has more votes
-      if (numberOfVotes[_vote] > numberOfVotes[winnerCandidate]) {
-        winnerCandidate = _vote;
-        epochCandidates[currentEpoch -1].numberVotesWinner = numberOfVotes[_vote];
-        if (3*numberOfVotes[_vote] >= 2*activeIdentities) {
-          uint256 blockHash = voteHashes[_vote].blockHash;
-          uint256 mRoot = voteHashes[_vote].merkleRoot;
-          uint256 tally = voteHashes[_vote].tally;
-          uint256 previousVote = voteHashes[_vote].previousVote;
-          postNewBlock(blockHash, currentEpoch -1, mRoot, tally, previousVote);
-        }
-    //Candidates memory winnerProposal;
-    /*winnerProposal.candidate = candidates;
-    winnerProposal.winner = winnerId;
-    winnerProposal.numberVotesWinner = numberOfVotes[winnerVote];
-    epochCandidates[proposalEpoch] = winnerProposal;
-    emit Winner(winnerProposal.winner);*/
-  //}
-
-  //}
-//}
+  
 
   /// @dev Verifies the validity of a PoI
   /// @param _poi the proof of inclusion as [sibling1, sibling2,..]

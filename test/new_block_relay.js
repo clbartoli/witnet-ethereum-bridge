@@ -157,7 +157,7 @@ contract("New Block Relay", accounts => {
     })
 
 
-    /*it("should detect there has been a tie and just set the epochStatus equal Pending", async () => {
+    it("should detect there has been a tie and just set the epochStatus equal Pending", async () => {
       // There are two blocks proposed once
       const vote1 = "0x" + sha.sha256("first vote")
       const vote2 = "0x" + sha.sha256("second vote")
@@ -185,9 +185,9 @@ contract("New Block Relay", accounts => {
       assert.equal(epochStatus, true)
       // It reverts the finalResult() since it detects there is been a tie
       // await truffleAssert.reverts(contest.finalresult(), "There has been a tie")
-    })*/
+    })
 
-    it("should detect there has been a tie and finalize the epoch when achieving consensus in later epochs", async () => {
+    /*it("should detect there has been a tie and finalize the epoch when achieving consensus in later epochs", async () => {
       // There are two blocks proposed once
       const vote1 = "0x" + sha.sha256("first vote")
       const vote2 = "0x" + sha.sha256("second vote")
@@ -225,38 +225,11 @@ contract("New Block Relay", accounts => {
       const epochStatus = await contest.checkStatusFinalized.call()
       assert.equal(epochStatus, true)
 
-    })
-
-    /*it("should detect there has been a tie and just set the epochStatus equal Pending", async () => {
-      // There are two blocks proposed once
-      const vote1 = "0x" + sha.sha256("first vote")
-      const vote2 = "0x" + sha.sha256("second vote")
-      const drMerkleRoot = 1
-      const drMerkleRoot2 = 2
-      const tallyMerkleRoot = 1
-      await contest.setAbsIdentities(3)
-      // Fix the timestamp in witnet to be 89159
-      const setEpoch = contest.setEpoch(89159)
-      await waitForHash(setEpoch)
-      const epoch = await contest.updateEpoch.call()
-      // Propose block1 to the Block Relay
-      const tx1 = contest.proposeBlock(vote1, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
-      await waitForHash(tx1)
-      // Propose block2 to the Block Relay
-      const tx2 = contest.proposeBlock(vote2, epoch - 1, drMerkleRoot2, tallyMerkleRoot, 0)
-      await waitForHash(tx2)
-      // Let's wait unitl the next epoch so we can get the final result
-      await contest.nextEpoch()
-      await contest.finalresult(0)
-      contest.proposeBlock(vote2, epoch, drMerkleRoot2, tallyMerkleRoot, vote2)
-      contest.proposeBlock(vote2, epoch, drMerkleRoot2, tallyMerkleRoot, vote2)
-      contest.proposeBlock(vote2, epoch, drMerkleRoot2, tallyMerkleRoot, vote2)
-      await contest.nextEpoch()
-      await contest.finalresult(vote2)
-
     })*/
 
-    it("should revert because the block proposed is not for a valid epoch", async () => {
+   
+
+    /*it("should revert because the block proposed is not for a valid epoch", async () => {
       const vote = "0x" + sha.sha256("vote proposed")
       const drMerkleRoot = 1
       const tallyMerkleRoot = 1
@@ -296,9 +269,9 @@ contract("New Block Relay", accounts => {
       const candidate = await contest.getCandidates.call()
       // Assert the candidates array is equal to 0
       assert.equal(0, candidate)
-    })
+    })*/
 
-    /*it("should save different candidates for different epochs", async () => {
+    it("should save different candidates for different epochs", async () => {
       // There are two blocks proposed once
       const vote1 = "0x" + sha.sha256("first vote")
       console.log(vote1)
@@ -331,7 +304,7 @@ contract("New Block Relay", accounts => {
       // It reverts the finalResult() since it detects there is been a tie
       //await truffleAssert.reverts(contest.finalresult(), "There has been a tie")
       assert.notEqual(winnerProposal, winnerProposal2)
-    })*/
+    })
 
     it("should save different candidates for different epochs", async () => {
       // There are two blocks proposed once
@@ -432,6 +405,7 @@ contract("New Block Relay", accounts => {
       const vote1 = "0x" + sha.sha256("first vote")
       const vote2 = "0x" + sha.sha256("second vote")
       const vote3 = "0x" + sha.sha256("third vote")
+      console.log(vote2)
       const drMerkleRoot = 1
       const tallyMerkleRoot = 1
       // Fix the timestamp in witnet to be 89159

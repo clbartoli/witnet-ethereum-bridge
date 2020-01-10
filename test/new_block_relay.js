@@ -45,7 +45,6 @@ contract("New Block Relay", accounts => {
       )
       // Should be equal the last beacon to vote
       const beacon = await contest.getLastBeacon.call()
-      console.log(beacon)
       assert.equal(beacon, web3.utils.bytesToHex(concatenated))
     })
 

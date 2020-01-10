@@ -18,6 +18,7 @@ contract NewBlockRelay is WitnetBridgeInterface {
     uint256 drHashMerkleRoot;
     // hash of the merkle root of the tallies in Witnet
     uint256 tallyHashMerkleRoot;
+    uint256 previousVote;
   }
 
   struct Beacon {
@@ -36,10 +37,14 @@ contract NewBlockRelay is WitnetBridgeInterface {
   }
 
   struct FinalizedBlock {
-    Hashes winningVote;
     string status;
+    uint256 blockHash;
   }
 
+  struct VoteInfo {
+    uint256 numberOfVotes;
+    Hashes voteHashes;
+  }
 
   // Array with the votes for the proposed blocks
   uint256[] public candidates;
@@ -68,24 +73,15 @@ contract NewBlockRelay is WitnetBridgeInterface {
   // Last block reported
   Beacon public lastBlock;
 
-
-
-  // Map a block proposed with the number of votes recieved
-  mapping(uint256 => uint256) public numberOfVotes;
+  // Map a vote proposed with the number of votes recieved and its hashes
+  mapping(uint256=> VoteInfo) internal voteInfo;
 
   /* Map the hash of the block with the merkle roots.
   It is used as an easy way to check if a blockHash already exists*/
   mapping (uint256 => MerkleRoots) public blocks;
 
-  // Map a vote when proposed with its hashes
-  mapping(uint256 => Hashes) internal voteHashes;
-
   // Map an epoch to the finalized block
   mapping(uint256 => FinalizedBlock) internal epochFinalizedBlock;
-
-  // Map a finalized vote to its hashes
-  mapping(uint256 => Hashes) internal finalVoteHashes;
-
 
  // Event emitted when there's been a tie in the votation process
   event Tie(string _tie);
@@ -126,13 +122,13 @@ contract NewBlockRelay is WitnetBridgeInterface {
 
   modifier noTie(){
     if (tiedVote != winnerVote) {
-      require(numberOfVotes[tiedVote] < numberOfVotes[winnerVote], "There has been a tie");
+      require(voteInfo[tiedVote].numberOfVotes < voteInfo[winnerVote].numberOfVotes, "There has been a tie");
     }
     _;
   }
 
-// Ensures the epoch for which the block is been proposed is valid
-// Valid if it is one epoch before the current epoch
+/* Ensures the epoch for which the block is been proposed is valid
+   Valid if it is one epoch before the current epoch */
   modifier validEpoch(uint256 _epoch){
     currentEpoch = updateEpoch();
     if (proposalEpoch == 0) {
@@ -174,7 +170,7 @@ contract NewBlockRelay is WitnetBridgeInterface {
         winnerEpoch,
         winnerDrMerkleRoot,
         winnerTallyMerkleRoot,
-        voteHashes[winnerVote].previousVote);
+        voteInfo[winnerVote].voteHashes.previousVote);
       // Update the proposal epoch
       proposalEpoch = currentEpoch;
     }
@@ -188,26 +184,26 @@ contract NewBlockRelay is WitnetBridgeInterface {
       _drMerkleRoot,
       _tallyMerkleRoot,
       _previousVote)));
-    if (numberOfVotes[vote] == 0) {
+    if (voteInfo[vote].numberOfVotes == 0) {
       // Add the vote to candidates
       candidates.push(vote);
       // Mapping the vote into its hashes
-      voteHashes[vote].blockHash = _blockHash;
-      voteHashes[vote].drMerkleRoot = _drMerkleRoot;
-      voteHashes[vote].tallyMerkleRoot = _tallyMerkleRoot;
-      voteHashes[vote].previousVote = _previousVote;
+      voteInfo[vote].voteHashes.blockHash = _blockHash;
+      voteInfo[vote].voteHashes.drMerkleRoot = _drMerkleRoot;
+      voteInfo[vote].voteHashes.tallyMerkleRoot = _tallyMerkleRoot;
+      voteInfo[vote].voteHashes.previousVote = _previousVote;
     }
 
     // Sum one vote
-    numberOfVotes[vote] += 1;
+    voteInfo[vote].numberOfVotes += 1;
     // Check if there is a tie
     if (vote != winnerVote) {
-      if (numberOfVotes[vote] == numberOfVotes[winnerVote]) {
+      if (voteInfo[vote].numberOfVotes == voteInfo[winnerVote].numberOfVotes) {
         emit Tie("there is been a tie");
         tiedVote = vote;
       }
       // Set as new winner if it has more votes
-      if (numberOfVotes[vote] > numberOfVotes[winnerVote]) {
+      if (voteInfo[vote].numberOfVotes > voteInfo[winnerVote].numberOfVotes) {
         winnerVote = vote;
         winnerId = _blockHash;
         winnerEpoch = _epoch;
@@ -320,7 +316,7 @@ contract NewBlockRelay is WitnetBridgeInterface {
     private
     blockDoesNotExist(_blockHash)
   {
-    if (3*numberOfVotes[winnerVote] < 2*activeIdentities) {
+    if (3*voteInfo[winnerVote].numberOfVotes < 2*activeIdentities) {
       epochFinalizedBlock[_epoch].status = "Pending";
       // Set the winner values to 0
       winnerVote = 0;
@@ -330,11 +326,11 @@ contract NewBlockRelay is WitnetBridgeInterface {
       winnerTallyMerkleRoot = 0;
     } else {
       // Map the epoch to the _vote's Hashes
-      epochFinalizedBlock[_epoch].winningVote = voteHashes[_vote];
       epochFinalizedBlock[_epoch].status = "Finalized";
-      finalVoteHashes[_vote] = epochFinalizedBlock[_epoch].winningVote;
+      epochFinalizedBlock[_epoch].blockHash = voteInfo[_vote].voteHashes.blockHash;
       blocks[_blockHash].drHashMerkleRoot = _drMerkleRoot;
       blocks[_blockHash].tallyHashMerkleRoot = _tallyMerkleRoot;
+      blocks[_blockHash].previousVote = _previousVote;
       // Check if the status of the previous block is Pending and so it needs to be finalized
       if (keccak256(abi.encodePacked((epochFinalizedBlock[_epoch-1].status))) == keccak256(abi.encodePacked(("Pending")))) {
         uint x;
@@ -344,12 +340,11 @@ contract NewBlockRelay is WitnetBridgeInterface {
             x = i;
             uint256 previousFinalVote;
             // Finalize the previous epochs with the corresponding previous votes and hashes
-            previousFinalVote = epochFinalizedBlock[_epoch-i].winningVote.previousVote;
-            epochFinalizedBlock[_epoch - i-1].winningVote = voteHashes[previousFinalVote];
-            finalVoteHashes[previousFinalVote] = epochFinalizedBlock[_epoch - i-1].winningVote;
-            uint256 previousBlockHash = finalVoteHashes[previousFinalVote].blockHash;
-            blocks[previousBlockHash].drHashMerkleRoot = finalVoteHashes[previousFinalVote].drMerkleRoot;
-            blocks[previousBlockHash].tallyHashMerkleRoot = finalVoteHashes[previousFinalVote].tallyMerkleRoot;
+            previousFinalVote = blocks[epochFinalizedBlock[_epoch-i].blockHash].previousVote;
+            epochFinalizedBlock[_epoch - i-1].blockHash = voteInfo[previousFinalVote].voteHashes.blockHash;
+            uint256 previousBlockHash = voteInfo[previousFinalVote].voteHashes.blockHash;
+            blocks[previousBlockHash].drHashMerkleRoot = voteInfo[previousFinalVote].voteHashes.drMerkleRoot;
+            blocks[previousBlockHash].tallyHashMerkleRoot = voteInfo[previousFinalVote].voteHashes.tallyMerkleRoot;
             // Set the previous status to Finalized
             epochFinalizedBlock[_epoch-i-1].status = "Finalized";
           } else if (keccak256(abi.encodePacked((epochFinalizedBlock[_epoch-i-1].status))) == keccak256(abi.encodePacked(("Finalized")))) {
@@ -358,7 +353,7 @@ contract NewBlockRelay is WitnetBridgeInterface {
         }
         // Post each block as last beacon, from the oldest to the newest
         for (uint j; j <= x-1; j++) {
-          lastBlock.blockHash = epochFinalizedBlock[_epoch - x + j].winningVote.blockHash;
+          lastBlock.blockHash = epochFinalizedBlock[_epoch - x + j].blockHash;
           lastBlock.epoch = _epoch - x + j;
         }
        }
@@ -375,7 +370,7 @@ contract NewBlockRelay is WitnetBridgeInterface {
       winnerTallyMerkleRoot = 0;
       // Delete the condidates array so its empty for next epoch
       for (uint i = 0; i <= candidates.length - 1; i++) {
-        delete voteHashes[candidates[i]];}
+        delete voteInfo[candidates[i]].voteHashes;}
       delete candidates;
   }
   }

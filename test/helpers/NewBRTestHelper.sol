@@ -77,7 +77,7 @@ contract NewBRTestHelper is NewBlockRelay {
 
   // Gets the blockHash of a vote finalized in a specific epoch
   function getBlockHash(uint256 _epoch) public  returns (uint256) {
-    uint256 blockHash = epochFinalizedBlock[_epoch].winningVote.blockHash;
+    uint256 blockHash = epochFinalizedBlock[_epoch].blockHash;
     return blockHash;
   }
 

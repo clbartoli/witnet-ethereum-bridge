@@ -20,26 +20,16 @@ contract NewBRTestHelper is NewBlockRelay {
 
   using ActiveBridgeSetLib for ActiveBridgeSetLib.ActiveBridgeSet;
 
-  constructor (uint256 _witnetGenesis, uint256 _epochSeconds, uint256 _firstBlock) NewBlockRelay(_witnetGenesis, _epochSeconds, _firstBlock) public {}
+  constructor (uint256 _witnetGenesis, uint256 _epochSeconds, uint256 _firstBlock)
+  NewBlockRelay(_witnetGenesis, _epochSeconds, _firstBlock) public {}
 
-  event Winner(uint256 _winner);
-  event EpochStatus(string _epochStatus);
-
-
-  // Addresses to be added to the ABS
-  address[] addresses = [
-    address(0x01),
-    address(0x02),
-    address(0x03),
-    address(0x04)
-  ];
-
+  // Pushes the activity in the ABS
   function pushActivity(uint256 _blockNumber) public {
-    //_blockNumber = block.number;
     address _address = msg.sender;
     abs.pushActivity(_address, _blockNumber);
   }
 
+  // Updates the currentEpoch
   function updateEpoch() public view returns (uint256) {
     return currentEpoch;
   }
@@ -49,23 +39,22 @@ contract NewBRTestHelper is NewBlockRelay {
     currentEpoch = currentEpoch + 1;
   }
 
+  // Sets the currentEpoch
   function setEpoch(uint256 _epoch) public returns (uint256) {
     currentEpoch = _epoch;
   }
 
-  function setAbsIdentities(uint256 _identitiesNumber) public returns (uint256) {
+  // Sets the number of members in the ABS
+  function setAbsIdentitiesNumber(uint256 _identitiesNumber) public returns (uint256) {
     activeIdentities = _identitiesNumber;
   }
 
-  /*function finalresult(uint256 _previousHash) public returns (uint256) {
-    postNewBlock(
-      winnerId,
-      winnerEpoch,
-      winnerDrMerkleRoot,
-      winnerTallyMerkleRoot,
-      _previousHash);
-  }*/
+  // Sets the previous epoch as finalized
+  function setPreviousEpochFinalized() public {
+    epochFinalizedBlock[currentEpoch - 2].status = "Finalized";
+  }
 
+  // Gets the vote with the poposeBlock inputs
   function getVote(
     uint256 _blockHash,
     uint256 _epoch,
@@ -86,39 +75,33 @@ contract NewBRTestHelper is NewBlockRelay {
 
   }
 
-  function getBlockHash(uint256 _epoch) public view returns (uint256) {
-    uint256 vote = epochVote[_epoch];
-    uint256 blockHash = voteHashes[vote].blockHash;
+  // Gets the blockHash of a vote finalized in a specific epoch
+  function getBlockHash(uint256 _epoch) public  returns (uint256) {
+    uint256 blockHash = epochFinalizedBlock[_epoch].blockHash;
     return blockHash;
   }
 
-  function getCandidates() public view returns (uint256) {
-    uint256 candidate = candidates[0];
-    return candidate;
+  // Gets the length of the candidates array
+  function getCandidatesLength() public view returns (uint256) {
+    return candidates.length;
   }
 
-  function winnerProposed(uint256 _epoch) public returns (uint256) {
-    return epochCandidates[_epoch].winner;
-  }
-
+  // Checks if the cuurentEpoch - 2 in pending
   function checkStatusPending() public returns (bool) {
     string memory pending = "Pending";
     //emit EpochStatus(epochStatus[currentEpoch-2])
-    if (keccak256(abi.encodePacked((epochStatus[currentEpoch-2]))) == keccak256(abi.encodePacked((pending)))) {
+    if (keccak256(abi.encodePacked((epochFinalizedBlock[currentEpoch - 2].status))) == keccak256(abi.encodePacked((pending)))) {
       return true;
     }
   }
 
+  // Checks if the cuurentEpoch - 2 in pending
   function checkStatusFinalized() public returns (bool) {
     string memory finalized = "Finalized";
     //emit EpochStatus(epochStatus[currentEpoch-2])
-    if (keccak256(abi.encodePacked((epochStatus[currentEpoch-2]))) == keccak256(abi.encodePacked((finalized)))) {
+    if (keccak256(abi.encodePacked((epochFinalizedBlock[currentEpoch - 2].status))) == keccak256(abi.encodePacked((finalized)))) {
       return true;
     }
   }
 
-  /*function getWinnerProposal() public returns (uint256) {
-    emit Winner(epochCandidates[currentEpoch].winner);
-    return epochCandidates[currentEpoch].winner;
-  }*/
 }

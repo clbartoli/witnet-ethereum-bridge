@@ -9,7 +9,7 @@ import "./WitnetBridgeInterface.sol";
  * @notice Contract to store/read block headers from the Witnet network
  * @author Witnet Foundation
  */
-contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
+contract NewBlockRelay is WitnetBridgeInterface {
 
   using ActiveBridgeSetLib for ActiveBridgeSetLib.ActiveBridgeSet;
 
@@ -90,7 +90,7 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
  // Event emitted when there's been a tie in the votation process
   event Tie(string _tie);
 
-  constructor(uint256 _witnetGenesis, uint256 _epochSeconds, uint256 _firstBlock) public{
+  constructor(uint256 _witnetGenesis, uint256 _epochSeconds, uint256 _firstBlock) WitnetBridgeInterface(address(this), 2) public{
     // Set the first epoch in Witnet plus the epoch duration when deploying the contract
     witnetGenesis = _witnetGenesis;
     epochSeconds = _epochSeconds;

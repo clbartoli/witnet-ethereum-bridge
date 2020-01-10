@@ -383,7 +383,7 @@ contract("New Block Relay", accounts => {
       epoch = await contest.updateEpoch.call()
       // Propose a random vote just to finalize previous epochs
       await contest.proposeBlock(blockHash2, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote4)
-      //Get the blockHash finalized for the epoch 89160
+      // Get the blockHash finalized for the epoch 89160
       let blockHash = await contest.getBlockHash.call(89160)
       blockHash = "0x" + blockHash.toString(16)
       const concatenated = web3.utils.hexToBytes(blockHash).concat(

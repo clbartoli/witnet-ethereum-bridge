@@ -73,17 +73,17 @@ contract NewBlockRelay is WitnetBridgeInterface {
   // Last block reported
   Beacon public lastBlock;
 
-  // Map a vote proposed with the number of votes recieved and its hashes
+  // Map a vote proposed to the number of votes recieved and its hashes
   mapping(uint256=> VoteInfo) internal voteInfo;
 
-  /* Map the hash of the block with the merkle roots.
+  /* Map the hash of the block to the merkle roots.
   It is used as an easy way to check if a blockHash already exists*/
   mapping (uint256 => MerkleRoots) public blocks;
 
   // Map an epoch to the finalized block
   mapping(uint256 => FinalizedBlock) internal epochFinalizedBlock;
 
- // Event emitted when there's been a tie in the votation process
+ // Event emitted when there's been a tie during the votation process
   event Tie(string _tie);
 
   constructor(uint256 _witnetGenesis, uint256 _epochSeconds, uint256 _firstBlock) WitnetBridgeInterface(address(this), 2) public{
@@ -325,7 +325,7 @@ contract NewBlockRelay is WitnetBridgeInterface {
       winnerDrMerkleRoot = 0;
       winnerTallyMerkleRoot = 0;
     } else {
-      // Map the epoch to the _vote's Hashes
+      // Map the epoch to the vote's Hashes
       epochFinalizedBlock[_epoch].status = "Finalized";
       epochFinalizedBlock[_epoch].blockHash = voteInfo[_vote].voteHashes.blockHash;
       blocks[_blockHash].drHashMerkleRoot = _drMerkleRoot;

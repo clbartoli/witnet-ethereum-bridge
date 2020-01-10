@@ -12,7 +12,7 @@ contract("New Block Relay", accounts => {
       contest = await NewBRTestHelper.new(1568559600, 90, 0)
     })
     it("should propose and post a new block", async () => {
-      // the blockhash we want to propose
+      // The blockhash we want to propose
       const blockHash = "0x" + sha.sha256("the vote to propose")
       const drMerkleRoot = 1
       const tallyMerkleRoot = 1
@@ -33,13 +33,12 @@ contract("New Block Relay", accounts => {
       await contest.nextEpoch()
       epoch = await contest.updateEpoch.call()
       // Propose another block in the next epoch so the previous one is finalized
-      await contest.proposeBlock(0,epoch -1, 0, 0 ,Vote)
-     
+      await contest.proposeBlock(0, epoch - 1, 0, 0, Vote)
       // Concatenation of the blockhash and the epoch-1 to check later if it's equal to the last beacon
       const concatenated = web3.utils.hexToBytes(blockHash).concat(
         web3.utils.hexToBytes(
           web3.utils.padLeft(
-            web3.utils.toHex(epoch-2), 64
+            web3.utils.toHex(epoch - 2), 64
           )
         )
       )
@@ -104,7 +103,6 @@ contract("New Block Relay", accounts => {
       // Propose vote1 to the Block Relay
       const tx1 = contest.proposeBlock(blockHash1, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
       await waitForHash(tx1)
-      const Vote1 = await contest.getVote.call(blockHash1, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
       // Propose vote2 to the Block Relay
       contest.proposeBlock(blockHash2, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
       // Propose for the second time vote2
@@ -113,7 +111,7 @@ contract("New Block Relay", accounts => {
       // Wait unitl the next epoch so to get the final result
       await contest.nextEpoch()
       // Propose another block in the next epoch so the previous one is finalized
-      await contest.proposeBlock(0,epoch, 0, 0 ,Vote2)
+      await contest.proposeBlock(0, epoch, 0, 0, Vote2)
       // Concatenation of the blockhash and the epoch to check later if it's equal to the last beacon
       const concatenated = web3.utils.hexToBytes(blockHash2).concat(
         web3.utils.hexToBytes(
@@ -141,17 +139,16 @@ contract("New Block Relay", accounts => {
       // Set the abs to have 3 identities
       await contest.setAbsIdentities(3)
       // Propose the vote to the Block Relay
-      const tx = contest.proposeBlock(blockHash, epoch-1, drMerkleRoot, tallyMerkleRoot, 0)
+      const tx = contest.proposeBlock(blockHash, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
       await waitForHash(tx)
       // Wait unitl the next epoch to get the final result
-       await contest.nextEpoch()
+      await contest.nextEpoch()
       // Propose another block in the next epoch so the previous one is finalized
-      await contest.proposeBlock(0,epoch, 0, 0 ,0)
+      await contest.proposeBlock(0, epoch, 0, 0, 0)
       // Check the status of epoch -2
       const epochStatus = await contest.checkStatusPending.call()
       assert.equal(epochStatus, true)
     })
-
 
     it("should detect there has been a tie and just set the epochStatus equal Pending", async () => {
       // There are two blocks proposed once
@@ -176,7 +173,7 @@ contract("New Block Relay", accounts => {
       // Let's wait unitl the next epoch so we can get the final result
       await contest.nextEpoch()
       // Propose another block in the next epoch so the previous one is finalized
-      await contest.proposeBlock(0,epoch, 0, 0 ,0)
+      await contest.proposeBlock(0, epoch, 0, 0, 0)
       const epochStatus = await contest.checkStatusPending.call()
       assert.equal(epochStatus, true)
     })
@@ -203,9 +200,8 @@ contract("New Block Relay", accounts => {
       const setEpoch = contest.setEpoch(89159)
       await waitForHash(setEpoch)
       const epoch = await contest.updateEpoch.call()
-      
       await truffleAssert.reverts(contest.proposeBlock(vote, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0),
-      "Not a member of the abs")
+        "Not a member of the abs")
     })
 
     it("should check a vote that is a candidates is deleted when posted", async () => {
@@ -227,16 +223,16 @@ contract("New Block Relay", accounts => {
       await waitForHash(setEpoch)
       epoch = await contest.updateEpoch.call()
       // Propose another block in the next epoch so the previous one is finalized
-      await contest.proposeBlock(0,epoch - 1, 0, 0 ,0)
+      await contest.proposeBlock(0, epoch - 1, 0, 0, 0)
       // The candidates array
       const candidate = await contest.getCandidates.call()
       // Assert there is just one candidate since the first is been canceled when posted
       assert.equal(1, candidate)
     })
 
-
     it("should propose a block, propose another one and two epochs later and finalize the three", async () => {
-      // The idea is that after two epoch with no consesus, when in epoch n the consensus is achived then epochs n-1 and n-2 are finalized as well
+      // The idea is that after two epoch with no consesus, when in epoch n the consensus is achived then
+      // epochs n-1 and n-2 are finalized as well
       const blockHash0 = "0x" + sha.sha256("null vote")
       const blockHash1 = "0x" + sha.sha256("first vote")
       const blockHash2 = "0x" + sha.sha256("second vote")
@@ -257,44 +253,40 @@ contract("New Block Relay", accounts => {
       contest.proposeBlock(blockHash0, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
       contest.proposeBlock(blockHash0, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
       const Vote = await contest.getVote.call(blockHash0, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
-      //await waitForHash(tx2)
       await contest.nextEpoch()
       epoch = await contest.updateEpoch.call()
       // Propose vote1 to the Block Relay
-      const tx3 = contest.proposeBlock(blockHash1, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote)
-      await waitForHash(tx3)
+      const tx2 = contest.proposeBlock(blockHash1, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote)
+      await waitForHash(tx2)
       const Vote1 = await contest.getVote.call(blockHash1, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote)
       // Wait for next epoch
       await contest.nextEpoch()
       epoch = await contest.updateEpoch.call()
       // Propose vote2 to the BlockRelay
-      const tx7 = contest.proposeBlock(blockHash2, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote1)
-      await waitForHash(tx7)
-      const Vote2 = await contest.getVote.call(blockHash2, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote1 )
+      const tx3 = contest.proposeBlock(blockHash2, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote1)
+      await waitForHash(tx3)
+      const Vote2 = await contest.getVote.call(blockHash2, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote1)
       // Wait for next epoch
       await contest.nextEpoch()
       epoch = await contest.updateEpoch.call()
       // Propose 3 times vote 3 to the BlockRelay
-      const tx4 =contest.proposeBlock(blockHash3, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote2)
-      //await waitForHash(tx4)
-      const tx5 = contest.proposeBlock(blockHash3, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote2)
-      //await waitForHash(tx5)
-      const tx6 = contest.proposeBlock(blockHash3, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote2)
+      contest.proposeBlock(blockHash3, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote2)
+      contest.proposeBlock(blockHash3, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote2)
+      contest.proposeBlock(blockHash3, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote2)
       const Vote3 = await contest.getVote.call(blockHash3, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote2)
-      //await waitForHash(tx6)
       // Wait for next epoch
       await contest.nextEpoch()
       epoch = await contest.updateEpoch.call()
       // Propose a random vote just to finalize previous epochs
       await contest.proposeBlock(blockHash2, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote3)
-      // Now we want to check that 
-      
+      // Now we want to check that
       const epochStatus = await contest.checkStatusFinalized.call()
       assert.equal(epochStatus, true)
     })
 
     it("should confirm a vote is been finalized", async () => {
-      // The idea is that after two epoch with no consesus, when in epoch n the consensus is achived then epochs n-1 and n-2 are finalized as well
+      // The idea is that after two epoch with no consesus, when in epoch n the consensus
+      // is achived then epochs n-1 and n-2 are finalized as well
       const blockHash0 = "0x" + sha.sha256("null vote")
       const blockHash1 = "0x" + sha.sha256("first vote")
       const blockHash2 = "0x" + sha.sha256("second vote")
@@ -315,7 +307,7 @@ contract("New Block Relay", accounts => {
       await waitForHash(tx1)
       const tx2 = contest.proposeBlock(blockHash0, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
       await waitForHash(tx2)
-      let Vote1 = await contest.getVote.call(blockHash0, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
+      const Vote1 = await contest.getVote.call(blockHash0, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
       await contest.nextEpoch()
       epoch = await contest.updateEpoch.call()
       // Propose vote1 to the Block Relay
@@ -333,7 +325,7 @@ contract("New Block Relay", accounts => {
       await contest.nextEpoch()
       epoch = await contest.updateEpoch.call()
       // Propose 3 times vote 3 to the BlockRelay
-      const tx4 =contest.proposeBlock(blockHash3, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote3)
+      const tx4 = contest.proposeBlock(blockHash3, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote3)
       await waitForHash(tx4)
       const tx5 = contest.proposeBlock(blockHash3, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote3)
       await waitForHash(tx5)
@@ -343,27 +335,26 @@ contract("New Block Relay", accounts => {
       // Wait for next epoch
       await contest.nextEpoch()
       epoch = await contest.updateEpoch.call()
-      
       // Propose a random vote just to finalize previous epochs
       await contest.proposeBlock(blockHash2, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote4)
       // Check the blockHash for epoch 89161 is the right one
-      blockHash = await contest.getBlockHash.call(89161)
-      blockHash =  "0x" + blockHash.toString(16)
+      let blockHash = await contest.getBlockHash.call(89161)
+      blockHash = "0x" + blockHash.toString(16)
       const concatenated = web3.utils.hexToBytes(blockHash).concat(
         web3.utils.hexToBytes(
           web3.utils.padLeft(
-            web3.utils.toHex(epoch-2), 64
+            web3.utils.toHex(epoch - 2), 64
           )
         )
       )
       // Should be equal the last beacon to vote
       const beacon = await contest.getLastBeacon.call()
       assert.equal(beacon, web3.utils.bytesToHex(concatenated))
-      
     })
 
     it("should confirm that currentEpoch - 3 is been posted", async () => {
-      // The idea is that after two epoch with no consesus, when in epoch n the consensus is achived then epochs n-1 and n-2 are finalized as well
+      // The idea is that after two epoch with no consesus, when in epoch n the
+      // consensus is achived then epochs n-1 and n-2 are finalized as well
       const blockHash0 = "0x" + sha.sha256("null vote")
       const blockHash1 = "0x" + sha.sha256("first vote")
       const blockHash2 = "0x" + sha.sha256("second vote")
@@ -384,7 +375,7 @@ contract("New Block Relay", accounts => {
       await waitForHash(tx1)
       const tx2 = contest.proposeBlock(blockHash0, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
       await waitForHash(tx2)
-      let Vote1 = await contest.getVote.call(blockHash0, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
+      const Vote1 = await contest.getVote.call(blockHash0, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
       await contest.nextEpoch()
       epoch = await contest.updateEpoch.call()
       // Propose vote1 to the Block Relay
@@ -402,7 +393,7 @@ contract("New Block Relay", accounts => {
       await contest.nextEpoch()
       epoch = await contest.updateEpoch.call()
       // Propose 3 times vote 3 to the BlockRelay
-      const tx4 =contest.proposeBlock(blockHash3, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote3)
+      const tx4 = contest.proposeBlock(blockHash3, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote3)
       await waitForHash(tx4)
       const tx5 = contest.proposeBlock(blockHash3, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote3)
       await waitForHash(tx5)
@@ -412,35 +403,29 @@ contract("New Block Relay", accounts => {
       // Wait for next epoch
       await contest.nextEpoch()
       epoch = await contest.updateEpoch.call()
-      
       // Propose a random vote just to finalize previous epochs
       await contest.proposeBlock(blockHash2, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote4)
       // Check the blockHash for epoch 89161 is the right one
-      blockHash = await contest.getBlockHash.call(89160)
-      blockHash =  "0x" + blockHash.toString(16)
+      let blockHash = await contest.getBlockHash.call(89160)
+      blockHash = "0x" + blockHash.toString(16)
       const concatenated = web3.utils.hexToBytes(blockHash).concat(
         web3.utils.hexToBytes(
           web3.utils.padLeft(
-            web3.utils.toHex(epoch-3), 64
+            web3.utils.toHex(epoch - 3), 64
           )
         )
       )
       const concatenated2 = web3.utils.hexToBytes(blockHash2).concat(
         web3.utils.hexToBytes(
           web3.utils.padLeft(
-            web3.utils.toHex(epoch-3), 64
+            web3.utils.toHex(epoch - 3), 64
           )
         )
       )
-
-      // Should be equal the last beacon to vote
-      const beacon = await contest.getLastBeacon.call()
       assert.equal(web3.utils.bytesToHex(concatenated), web3.utils.bytesToHex(concatenated2))
-      
     })
   })
 })
-
 const waitForHash = txQ =>
   new Promise((resolve, reject) =>
     txQ.on("transactionHash", resolve).catch(reject)

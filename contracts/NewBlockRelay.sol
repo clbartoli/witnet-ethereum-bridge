@@ -12,7 +12,7 @@ import "./WitnetBridgeInterface.sol";
 contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
 
   using ActiveBridgeSetLib for ActiveBridgeSetLib.ActiveBridgeSet;
-  
+
   struct MerkleRoots {
     // hash of the merkle root of the DRs in Witnet
     uint256 drHashMerkleRoot;
@@ -71,7 +71,7 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
   Beacon public lastBlock;
 
 
-  
+
   // Map a block proposed with the number of votes recieved
   mapping(uint256 => uint256) public numberOfVotes;
 
@@ -89,7 +89,7 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
 
  // Event emitted when there's been a tie in the votation process
   event Tie(string _tie);
-  
+
   constructor(uint256 _witnetGenesis, uint256 _epochSeconds, uint256 _firstBlock) public{
     // Set the first epoch in Witnet plus the epoch duration when deploying the contract
     witnetGenesis = _witnetGenesis;
@@ -110,7 +110,10 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
 
    //  Ensures that neither Poi nor PoE are allowed if the epoch is pending
   modifier finalizedEpoch(uint256 _epoch){
-    require(keccak256(abi.encodePacked((epochFinalizedBlock[_epoch].status))) == keccak256(abi.encodePacked(("Finalized"))), "The block has not been finalized");
+    require(
+      keccak256(abi.encodePacked((epochFinalizedBlock[_epoch].status))) ==
+      keccak256(abi.encodePacked(("Finalized"))),
+      "The block has not been finalized");
     _;
   }
 
@@ -121,7 +124,7 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
   }
 
 
-   modifier noTie(){
+  modifier noTie(){
     if (tiedVote != winnerVote) {
       require(numberOfVotes[tiedVote] < numberOfVotes[winnerVote], "There has been a tie");
     }
@@ -139,7 +142,7 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
     _;
   }
 
- 
+
   /// @dev Updates the epoch
   function updateEpoch() public view returns(uint256) {
     return (block.timestamp - witnetGenesis)/epochSeconds;
@@ -194,7 +197,7 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
       voteHashes[vote].tally = _tallyMerkleRoot;
       voteHashes[vote].previousVote = _previousVote;
     }
-    
+
     // Sum one vote
     numberOfVotes[vote] += 1;
     // Check if there is a tie
@@ -211,11 +214,11 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
         winnerDrMerkleRoot = _drMerkleRoot;
         winnerTallyMerkleRoot = _tallyMerkleRoot;
     }
-    
+
     }
 
     return bytes32(vote);
-    
+
   }
 
   /// @dev Retrieve the requests-only merkle root hash that was reported for a specific block header.
@@ -251,7 +254,6 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
   {
     return abi.encodePacked(lastBlock.blockHash, lastBlock.epoch);
   }
-
 
 /// @dev Verifies the validity of a PoI against the DR merkle root
   /// @param _poi the proof of inclusion as [sibling1, sibling2,..]
@@ -302,7 +304,7 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
       _element));
 
   }
-  
+
   /// @dev Post new block into the block relay
   /// @param _blockHash Hash of the block headerPost
   /// @param _epoch Witnet epoch to which the block belongs to
@@ -318,71 +320,66 @@ contract NewBlockRelay is WitnetBridgeInterface(address(this), 2) {
     private
     blockDoesNotExist(_blockHash)
   {
-     if (3*numberOfVotes[winnerVote] < 2*activeIdentities) {
-        epochFinalizedBlock[_epoch].status = "Pending";
-        // Set the winner values to 0
-        winnerVote = 0;
-        winnerId = 0;
-        winnerEpoch = 0;
-        winnerDrMerkleRoot = 0;
-        winnerTallyMerkleRoot = 0;
-      } 
-      else {
-        // Map the epoch to the _vote's Hashes 
-        epochFinalizedBlock[_epoch].winningVote = voteHashes[_vote];
-        epochFinalizedBlock[_epoch].status = "Finalized";
-        finalVoteHashes[_vote] = epochFinalizedBlock[_epoch].winningVote;
-        blocks[_blockHash].drHashMerkleRoot = _drMerkleRoot;
-        blocks[_blockHash].tallyHashMerkleRoot = _tallyMerkleRoot;
-        // Check if the status of the previous block is Pending and so it needs to be finalized
-        if (keccak256(abi.encodePacked((epochFinalizedBlock[_epoch-1].status))) == keccak256(abi.encodePacked(("Pending")))){
-       uint x;
+    if (3*numberOfVotes[winnerVote] < 2*activeIdentities) {
+      epochFinalizedBlock[_epoch].status = "Pending";
+      // Set the winner values to 0
+      winnerVote = 0;
+      winnerId = 0;
+      winnerEpoch = 0;
+      winnerDrMerkleRoot = 0;
+      winnerTallyMerkleRoot = 0;
+    } else {
+      // Map the epoch to the _vote's Hashes
+      epochFinalizedBlock[_epoch].winningVote = voteHashes[_vote];
+      epochFinalizedBlock[_epoch].status = "Finalized";
+      finalVoteHashes[_vote] = epochFinalizedBlock[_epoch].winningVote;
+      blocks[_blockHash].drHashMerkleRoot = _drMerkleRoot;
+      blocks[_blockHash].tallyHashMerkleRoot = _tallyMerkleRoot;
+      // Check if the status of the previous block is Pending and so it needs to be finalized
+      if (keccak256(abi.encodePacked((epochFinalizedBlock[_epoch-1].status))) == keccak256(abi.encodePacked(("Pending")))) {
+        uint x;
         // Select the last Finalized epoch
         for (uint i; i>=0; i++) {
           if (keccak256(abi.encodePacked(epochFinalizedBlock[_epoch-i-1].status)) != keccak256(abi.encodePacked(("Finalized")))) {
-          x = i;
-          uint256 previousFinalVote;
-          // Finalize the previous epochs with the corresponding previous votes and hashes
-          previousFinalVote = epochFinalizedBlock[_epoch-i].winningVote.previousVote;
-          epochFinalizedBlock[_epoch - i-1].winningVote = voteHashes[previousFinalVote];
-          finalVoteHashes[previousFinalVote] = epochFinalizedBlock[_epoch - i-1].winningVote;
-          uint256 previousBlockHash = finalVoteHashes[previousFinalVote].blockHash;
-          blocks[previousBlockHash].drHashMerkleRoot = finalVoteHashes[previousFinalVote].merkleRoot;
-          blocks[previousBlockHash].tallyHashMerkleRoot = finalVoteHashes[previousFinalVote].tally;
-          // Set the previous status to Finalized 
-          epochFinalizedBlock[_epoch-i-1].status = "Finalized";
+            x = i;
+            uint256 previousFinalVote;
+            // Finalize the previous epochs with the corresponding previous votes and hashes
+            previousFinalVote = epochFinalizedBlock[_epoch-i].winningVote.previousVote;
+            epochFinalizedBlock[_epoch - i-1].winningVote = voteHashes[previousFinalVote];
+            finalVoteHashes[previousFinalVote] = epochFinalizedBlock[_epoch - i-1].winningVote;
+            uint256 previousBlockHash = finalVoteHashes[previousFinalVote].blockHash;
+            blocks[previousBlockHash].drHashMerkleRoot = finalVoteHashes[previousFinalVote].merkleRoot;
+            blocks[previousBlockHash].tallyHashMerkleRoot = finalVoteHashes[previousFinalVote].tally;
+            // Set the previous status to Finalized
+            epochFinalizedBlock[_epoch-i-1].status = "Finalized";
           } else if (keccak256(abi.encodePacked((epochFinalizedBlock[_epoch-i-1].status))) == keccak256(abi.encodePacked(("Finalized")))) {
-          break;
+            break;
           }
         }
-        // Post each block as last beacon, from the oldest to the newest 
-       for (uint j; j <= x-1; j++) {
-        lastBlock.blockHash = epochFinalizedBlock[_epoch - x + j].winningVote.blockHash;
-        lastBlock.epoch = _epoch -x + j;
+        // Post each block as last beacon, from the oldest to the newest
+        for (uint j; j <= x-1; j++) {
+          lastBlock.blockHash = epochFinalizedBlock[_epoch - x + j].winningVote.blockHash;
+          lastBlock.epoch = _epoch - x + j;
         }
        }
        // Post the last block
-        lastBlock.blockHash = _blockHash;
-        lastBlock.epoch = _epoch;
-     
-    // Set the winner values equal 0
-    winnerId = 0;
-    winnerVote = 0;
-    winnerId = 0;
-    winnerEpoch = 0;
-    winnerDrMerkleRoot = 0;
-    winnerTallyMerkleRoot = 0;
-    
-    // Delete the condidates array so its empty for next epoch
-    for (uint i = 0; i <= candidates.length - 1; i++) {
-      delete voteHashes[candidates[i]];}
-    delete candidates;
-    
-  }
-  }
+      lastBlock.blockHash = _blockHash;
+      lastBlock.epoch = _epoch;
 
-  
-  
+    // Set the winner values equal 0
+      winnerId = 0;
+      winnerVote = 0;
+      winnerId = 0;
+      winnerEpoch = 0;
+      winnerDrMerkleRoot = 0;
+      winnerTallyMerkleRoot = 0;
+      // Delete the condidates array so its empty for next epoch
+      for (uint i = 0; i <= candidates.length - 1; i++) {
+        delete voteHashes[candidates[i]];}
+      delete candidates;
+
+  }
+  }
 
   /// @dev Verifies the validity of a PoI
   /// @param _poi the proof of inclusion as [sibling1, sibling2,..]

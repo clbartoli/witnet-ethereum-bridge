@@ -66,6 +66,12 @@ contract NewBRTestHelper is NewBlockRelay {
       _previousHash);
   }*/
 
+  function setPreviousEpochFinalized() public {
+    epochFinalizedBlock[89157].status = "Finalized";
+    //epochStatus[89157] = "Pending";
+    //return epochFinalizedBlock[currentEpoch - 1].status;
+  }
+
   function getVote(
     uint256 _blockHash,
     uint256 _epoch,
@@ -86,8 +92,14 @@ contract NewBRTestHelper is NewBlockRelay {
 
   }
 
-  function getBlockHash(uint256 _epoch) public view returns (uint256) {
-    uint256 vote = epochVote[_epoch];
+  function getBlockHash(uint256 _epoch) public  returns (uint256) {
+    //Hashes memory voteHashes = epochFinalizedBlock[_epoch].winningVote;
+    uint256 _blockHash = epochFinalizedBlock[_epoch].winningVote.blockHash;
+    uint256 _drMerkleRoot = epochFinalizedBlock[_epoch].winningVote.merkleRoot;
+    uint256 _tallyMerkleRoot = epochFinalizedBlock[_epoch].winningVote.tally;
+    uint256 _previousVote = epochFinalizedBlock[_epoch].winningVote.previousVote;
+    uint256 vote = getVote(
+      _blockHash, _epoch, _drMerkleRoot, _tallyMerkleRoot, _previousVote);
     uint256 blockHash = voteHashes[vote].blockHash;
     return blockHash;
   }
@@ -97,14 +109,10 @@ contract NewBRTestHelper is NewBlockRelay {
     return candidate;
   }
 
-  function winnerProposed(uint256 _epoch) public returns (uint256) {
-    return epochCandidates[_epoch].winner;
-  }
-
   function checkStatusPending() public returns (bool) {
     string memory pending = "Pending";
     //emit EpochStatus(epochStatus[currentEpoch-2])
-    if (keccak256(abi.encodePacked((epochStatus[currentEpoch-2]))) == keccak256(abi.encodePacked((pending)))) {
+    if (keccak256(abi.encodePacked((epochFinalizedBlock[currentEpoch - 2].status))) == keccak256(abi.encodePacked((pending)))) {
       return true;
     }
   }
@@ -112,7 +120,7 @@ contract NewBRTestHelper is NewBlockRelay {
   function checkStatusFinalized() public returns (bool) {
     string memory finalized = "Finalized";
     //emit EpochStatus(epochStatus[currentEpoch-2])
-    if (keccak256(abi.encodePacked((epochStatus[currentEpoch-2]))) == keccak256(abi.encodePacked((finalized)))) {
+    if (keccak256(abi.encodePacked((epochFinalizedBlock[currentEpoch - 2].status))) == keccak256(abi.encodePacked((finalized)))) {
       return true;
     }
   }

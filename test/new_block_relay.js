@@ -19,7 +19,8 @@ contract("New Block Relay", accounts => {
       // Fix the timestamp in witnet to be 89159
       const setEpoch = contest.setEpoch(89159)
       await waitForHash(setEpoch)
-      const epoch = await contest.updateEpoch.call()
+      let epoch = await contest.updateEpoch.call()
+      contest.setPreviousEpochFinalized()
       // Update the ABS to be included
       await contest.pushActivity(1)
       // Propose the vote to the Block Relay
@@ -29,19 +30,21 @@ contract("New Block Relay", accounts => {
       const Vote = await contest.getVote.call(vote, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
       // Wait unitl the next epoch to get the final result
       await contest.nextEpoch()
+      epoch = await contest.updateEpoch.call()
       // Propose another block in the next epoch so the previous one is finalized
-      await contest.proposeBlock(0,epoch, 0, 0 ,Vote)
-      //await contest.finalresult(0)
+      await contest.proposeBlock(0,epoch -1, 0, 0 ,Vote)
+     
       // Concatenation of the blockhash and the epoch-1 to check later if it's equal to the last beacon.blockHash
       const concatenated = web3.utils.hexToBytes(vote).concat(
         web3.utils.hexToBytes(
           web3.utils.padLeft(
-            web3.utils.toHex(epoch - 1), 64
+            web3.utils.toHex(epoch-2), 64
           )
         )
       )
       // Should be equal the last beacon to vote
       const beacon = await contest.getLastBeacon.call()
+      console.log(beacon)
       assert.equal(beacon, web3.utils.bytesToHex(concatenated))
     })
 
@@ -229,7 +232,7 @@ contract("New Block Relay", accounts => {
 
    
 
-    /*it("should revert because the block proposed is not for a valid epoch", async () => {
+    it("should revert because the block proposed is not for a valid epoch", async () => {
       const vote = "0x" + sha.sha256("vote proposed")
       const drMerkleRoot = 1
       const tallyMerkleRoot = 1
@@ -243,7 +246,7 @@ contract("New Block Relay", accounts => {
         "Proposing a block for a non valid epoch")
     })
 
-    it("should set the candidates array to 0 after posting a block", async () => {
+    /*it("should set the candidates array to 0 after posting a block", async () => {
       // the blockhash we want to propose
       const vote = "0x" + sha.sha256("the vote to propose")
       const drMerkleRoot = 1
@@ -271,7 +274,7 @@ contract("New Block Relay", accounts => {
       assert.equal(0, candidate)
     })*/
 
-    it("should save different candidates for different epochs", async () => {
+    /*it("should save different candidates for different epochs", async () => {
       // There are two blocks proposed once
       const vote1 = "0x" + sha.sha256("first vote")
       console.log(vote1)
@@ -304,9 +307,9 @@ contract("New Block Relay", accounts => {
       // It reverts the finalResult() since it detects there is been a tie
       //await truffleAssert.reverts(contest.finalresult(), "There has been a tie")
       assert.notEqual(winnerProposal, winnerProposal2)
-    })
+    })*/
 
-    it("should save different candidates for different epochs", async () => {
+    /*it("should save different candidates for different epochs", async () => {
       // There are two blocks proposed once
       const vote1 = "0x" + sha.sha256("first vote")
       const vote2 = "0x" + sha.sha256("second vote")
@@ -339,7 +342,7 @@ contract("New Block Relay", accounts => {
       // It reverts the finalResult() since it detects there is been a tie
       //await truffleAssert.reverts(contest.finalresult(), "There has been a tie")
       assert.notEqual(winnerProposal, winnerProposal2)
-    })
+    })*/
 
     it("should propose a block, propose another one and two epochs later and finalize the three", async () => {
       // The idea is that after two epoch with no consesus, when in epoch n the consensus is achived then epochs n-1 and n-2 are finalized as well
@@ -397,7 +400,6 @@ contract("New Block Relay", accounts => {
       
       const epochStatus = await contest.checkStatusFinalized.call()
       assert.equal(epochStatus, true)
-      // assert.notEqual(winnerProposal, winnerProposal2)
     })
     it("should confirm a vote is been finalized", async () => {
       // The idea is that after two epoch with no consesus, when in epoch n the consensus is achived then epochs n-1 and n-2 are finalized as well
@@ -468,13 +470,7 @@ contract("New Block Relay", accounts => {
       // Now we want to check that 
       // Check the blockHash for epoch 89160 is the right one
       const blockHash = await contest.getBlockHash.call(89159)
-      //console.log(blockHash.toString(16))
-      //assert.equal((blockHash).toString(16), vote3)
-
-
-      //const epochStatus = await contest.checkStatusFinalized.call()
-      //assert.equal(epochStatus, true)
-      // assert.notEqual(winnerProposal, winnerProposal2)
+      
     })
 
     /*it("should propose 2 blocks, have a tie and then finalize the voting with a new block", async () => {

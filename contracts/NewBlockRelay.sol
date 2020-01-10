@@ -30,8 +30,8 @@ contract NewBlockRelay is WitnetBridgeInterface {
   // Struct with the hashes of a votation
   struct Hashes {
     uint256 blockHash;
-    uint256 merkleRoot;
-    uint256 tally;
+    uint256 drMerkleRoot;
+    uint256 tallyMerkleRoot;
     uint256 previousVote;
   }
 
@@ -41,10 +41,8 @@ contract NewBlockRelay is WitnetBridgeInterface {
   }
 
 
-  // Array with the votes for the possible block
+  // Array with the votes for the proposed blocks
   uint256[] public candidates;
-
-
 
   // Initializes the block with the maximum number of votes
   uint256 winnerVote;
@@ -75,15 +73,17 @@ contract NewBlockRelay is WitnetBridgeInterface {
   // Map a block proposed with the number of votes recieved
   mapping(uint256 => uint256) public numberOfVotes;
 
- // Map the hash of the block with the merkle roots
+  /* Map the hash of the block with the merkle roots.
+  It is used as an easy way to check if a blockHash already exists*/
   mapping (uint256 => MerkleRoots) public blocks;
 
-  // Map a vote with its drMerkleRoot and Tally
-
+  // Map a vote when proposed with its hashes
   mapping(uint256 => Hashes) internal voteHashes;
 
+  // Map an epoch to the finalized block
   mapping(uint256 => FinalizedBlock) internal epochFinalizedBlock;
 
+  // Map a finalized vote to its hashes
   mapping(uint256 => Hashes) internal finalVoteHashes;
 
 
@@ -193,8 +193,8 @@ contract NewBlockRelay is WitnetBridgeInterface {
       candidates.push(vote);
       // Mapping the vote into its hashes
       voteHashes[vote].blockHash = _blockHash;
-      voteHashes[vote].merkleRoot = _drMerkleRoot;
-      voteHashes[vote].tally = _tallyMerkleRoot;
+      voteHashes[vote].drMerkleRoot = _drMerkleRoot;
+      voteHashes[vote].tallyMerkleRoot = _tallyMerkleRoot;
       voteHashes[vote].previousVote = _previousVote;
     }
 
@@ -348,8 +348,8 @@ contract NewBlockRelay is WitnetBridgeInterface {
             epochFinalizedBlock[_epoch - i-1].winningVote = voteHashes[previousFinalVote];
             finalVoteHashes[previousFinalVote] = epochFinalizedBlock[_epoch - i-1].winningVote;
             uint256 previousBlockHash = finalVoteHashes[previousFinalVote].blockHash;
-            blocks[previousBlockHash].drHashMerkleRoot = finalVoteHashes[previousFinalVote].merkleRoot;
-            blocks[previousBlockHash].tallyHashMerkleRoot = finalVoteHashes[previousFinalVote].tally;
+            blocks[previousBlockHash].drHashMerkleRoot = finalVoteHashes[previousFinalVote].drMerkleRoot;
+            blocks[previousBlockHash].tallyHashMerkleRoot = finalVoteHashes[previousFinalVote].tallyMerkleRoot;
             // Set the previous status to Finalized
             epochFinalizedBlock[_epoch-i-1].status = "Finalized";
           } else if (keccak256(abi.encodePacked((epochFinalizedBlock[_epoch-i-1].status))) == keccak256(abi.encodePacked(("Finalized")))) {
@@ -377,7 +377,6 @@ contract NewBlockRelay is WitnetBridgeInterface {
       for (uint i = 0; i <= candidates.length - 1; i++) {
         delete voteHashes[candidates[i]];}
       delete candidates;
-
   }
   }
 

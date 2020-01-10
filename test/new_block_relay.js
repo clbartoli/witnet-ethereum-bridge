@@ -24,7 +24,7 @@ contract("New Block Relay", accounts => {
       // Update the ABS to be included
       await contest.pushActivity(1)
       // Set the ABS to just one member
-      await contest.setAbsIdentities(1)
+      await contest.setAbsIdentitiesNumber(1)
       // Propose the vote to the Block Relay
       const tx = contest.proposeBlock(blockHash, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
       await waitForHash(tx)
@@ -99,7 +99,7 @@ contract("New Block Relay", accounts => {
       // Update the ABS to be included
       await contest.pushActivity(1)
       // Set the number of members of the ABS to 3
-      await contest.setAbsIdentities(3)
+      await contest.setAbsIdentitiesNumber(3)
       // Propose the vote 3 times to the Block Relay
       const tx = contest.proposeBlock(blockHash1, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
       await waitForHash(tx)
@@ -138,7 +138,7 @@ contract("New Block Relay", accounts => {
       // Update the ABS to be included
       await contest.pushActivity(1)
       // Set the abs to 3 identities
-      await contest.setAbsIdentities(3)
+      await contest.setAbsIdentitiesNumber(3)
       // Propose the vote to the Block Relay
       const tx = contest.proposeBlock(blockHash, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
       await waitForHash(tx)
@@ -200,7 +200,7 @@ contract("New Block Relay", accounts => {
       // Propose another block in the next epoch so the previous one is finalized
       await contest.proposeBlock(0, epoch - 1, 0, 0, 0)
       // The candidates array
-      const candidate = await contest.getCandidates.call()
+      const candidate = await contest.getCandidatesLength.call()
       // Assert there is just one candidate since the first is been canceled when posted
       assert.equal(1, candidate)
     })
@@ -221,7 +221,7 @@ contract("New Block Relay", accounts => {
       // Update the ABS to be included
       await contest.pushActivity(1)
       // Set the ABS to 3 members
-      await contest.setAbsIdentities(3)
+      await contest.setAbsIdentitiesNumber(3)
       // Propose blockHash0 to he Block Relay 3 times
       const tx = contest.proposeBlock(blockHash0, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
       await waitForHash(tx)
@@ -275,7 +275,7 @@ contract("New Block Relay", accounts => {
       // Update the ABS to be included
       await contest.pushActivity(1)
       // Set the ABS to 3 members
-      await contest.setAbsIdentities(3)
+      await contest.setAbsIdentitiesNumber(3)
       // Propose blockHash0 3 times to the Block Relay
       const tx = contest.proposeBlock(blockHash0, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
       await waitForHash(tx)
@@ -344,7 +344,7 @@ contract("New Block Relay", accounts => {
       // Update the ABS to be included
       await contest.pushActivity(1)
       // Set the ABS to 3 members
-      await contest.setAbsIdentities(3)
+      await contest.setAbsIdentitiesNumber(3)
       // Propose blockHash0 3 times to the Block Relay
       const tx = contest.proposeBlock(blockHash0, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
       await waitForHash(tx)

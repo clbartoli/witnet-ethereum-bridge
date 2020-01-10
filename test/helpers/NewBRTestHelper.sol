@@ -23,15 +23,13 @@ contract NewBRTestHelper is NewBlockRelay {
   constructor (uint256 _witnetGenesis, uint256 _epochSeconds, uint256 _firstBlock)
   NewBlockRelay(_witnetGenesis, _epochSeconds, _firstBlock) public {}
 
-  event Winner(uint256 _winner);
-  event EpochStatus(string _epochStatus);
-
+  // Pushes the activity in the ABS
   function pushActivity(uint256 _blockNumber) public {
-    //_blockNumber = block.number;
     address _address = msg.sender;
     abs.pushActivity(_address, _blockNumber);
   }
 
+  // Updates the currentEpoch
   function updateEpoch() public view returns (uint256) {
     return currentEpoch;
   }
@@ -41,18 +39,22 @@ contract NewBRTestHelper is NewBlockRelay {
     currentEpoch = currentEpoch + 1;
   }
 
+  // Sets the currentEpoch
   function setEpoch(uint256 _epoch) public returns (uint256) {
     currentEpoch = _epoch;
   }
 
-  function setAbsIdentities(uint256 _identitiesNumber) public returns (uint256) {
+  // Sets the number of members in the ABS
+  function setAbsIdentitiesNumber(uint256 _identitiesNumber) public returns (uint256) {
     activeIdentities = _identitiesNumber;
   }
 
+  // Sets the previous epoch as finalized
   function setPreviousEpochFinalized() public {
     epochFinalizedBlock[currentEpoch - 2].status = "Finalized";
   }
 
+  // Gets the vote with the poposeBlock inputs
   function getVote(
     uint256 _blockHash,
     uint256 _epoch,
@@ -73,15 +75,18 @@ contract NewBRTestHelper is NewBlockRelay {
 
   }
 
+  // Gets the blockHash of a vote finalized in a specific epoch
   function getBlockHash(uint256 _epoch) public  returns (uint256) {
     uint256 blockHash = epochFinalizedBlock[_epoch].winningVote.blockHash;
     return blockHash;
   }
 
-  function getCandidates() public view returns (uint256) {
+  // Gets the length of the candidates array
+  function getCandidatesLength() public view returns (uint256) {
     return candidates.length;
   }
 
+  // Checks if the cuurentEpoch - 2 in pending
   function checkStatusPending() public returns (bool) {
     string memory pending = "Pending";
     //emit EpochStatus(epochStatus[currentEpoch-2])
@@ -90,6 +95,7 @@ contract NewBRTestHelper is NewBlockRelay {
     }
   }
 
+  // Checks if the cuurentEpoch - 2 in pending
   function checkStatusFinalized() public returns (bool) {
     string memory finalized = "Finalized";
     //emit EpochStatus(epochStatus[currentEpoch-2])

@@ -20,19 +20,11 @@ contract NewBRTestHelper is NewBlockRelay {
 
   using ActiveBridgeSetLib for ActiveBridgeSetLib.ActiveBridgeSet;
 
-  constructor (uint256 _witnetGenesis, uint256 _epochSeconds, uint256 _firstBlock) NewBlockRelay(_witnetGenesis, _epochSeconds, _firstBlock) public {}
+  constructor (uint256 _witnetGenesis, uint256 _epochSeconds, uint256 _firstBlock)
+  NewBlockRelay(_witnetGenesis, _epochSeconds, _firstBlock) public {}
 
   event Winner(uint256 _winner);
   event EpochStatus(string _epochStatus);
-
-
-  // Addresses to be added to the ABS
-  address[] addresses = [
-    address(0x01),
-    address(0x02),
-    address(0x03),
-    address(0x04)
-  ];
 
   function pushActivity(uint256 _blockNumber) public {
     //_blockNumber = block.number;
@@ -57,19 +49,8 @@ contract NewBRTestHelper is NewBlockRelay {
     activeIdentities = _identitiesNumber;
   }
 
-  /*function finalresult(uint256 _previousHash) public returns (uint256) {
-    postNewBlock(
-      winnerId,
-      winnerEpoch,
-      winnerDrMerkleRoot,
-      winnerTallyMerkleRoot,
-      _previousHash);
-  }*/
-
   function setPreviousEpochFinalized() public {
-    epochFinalizedBlock[89157].status = "Finalized";
-    //epochStatus[89157] = "Pending";
-    //return epochFinalizedBlock[currentEpoch - 1].status;
+    epochFinalizedBlock[currentEpoch - 2].status = "Finalized";
   }
 
   function getVote(
@@ -93,20 +74,12 @@ contract NewBRTestHelper is NewBlockRelay {
   }
 
   function getBlockHash(uint256 _epoch) public  returns (uint256) {
-    //Hashes memory voteHashes = epochFinalizedBlock[_epoch].winningVote;
-    uint256 _blockHash = epochFinalizedBlock[_epoch].winningVote.blockHash;
-    uint256 _drMerkleRoot = epochFinalizedBlock[_epoch].winningVote.merkleRoot;
-    uint256 _tallyMerkleRoot = epochFinalizedBlock[_epoch].winningVote.tally;
-    uint256 _previousVote = epochFinalizedBlock[_epoch].winningVote.previousVote;
-    uint256 vote = getVote(
-      _blockHash, _epoch, _drMerkleRoot, _tallyMerkleRoot, _previousVote);
-    uint256 blockHash = voteHashes[vote].blockHash;
+    uint256 blockHash = epochFinalizedBlock[_epoch].winningVote.blockHash;
     return blockHash;
   }
 
   function getCandidates() public view returns (uint256) {
-    uint256 candidate = candidates[0];
-    return candidate;
+    return candidates.length;
   }
 
   function checkStatusPending() public returns (bool) {
@@ -125,8 +98,4 @@ contract NewBRTestHelper is NewBlockRelay {
     }
   }
 
-  /*function getWinnerProposal() public returns (uint256) {
-    emit Winner(epochCandidates[currentEpoch].winner);
-    return epochCandidates[currentEpoch].winner;
-  }*/
 }

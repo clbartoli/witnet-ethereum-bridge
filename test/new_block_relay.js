@@ -23,10 +23,14 @@ contract("New Block Relay", accounts => {
       let epoch = await contest.updateEpoch.call()
 
       // Update the ABS to be included
-      await contest.pushActivity(1)
-
+      await contest.pushActivity(1, accounts[0])
+      // Set the ABS to just one member
+      await contest.setAbsIdentitiesNumber(1)
       // Propose the vote to the Block Relay
-      const tx = contest.proposeBlock(blockHash, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
+      const tx = contest.proposeBlock(blockHash, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0,
+       {
+        from: accounts[0],
+      })
       await waitForHash(tx)
       // Get the vote proposed as the concatenation of the inputs of the proposeBlock
       const Vote = await contest.getVote.call(blockHash, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
@@ -36,9 +40,11 @@ contract("New Block Relay", accounts => {
       epoch = await contest.updateEpoch.call()
 
       // Propose another block in the next epoch so the previous one is finalized
-      await contest.proposeBlock(0, epoch - 1, 0, 0, Vote)
-
-      // Concatenation of the blockHash and the epoch-1 to check later if it's equal to the last beacon
+      await contest.proposeBlock(0, epoch - 1, 0, 0, Vote,
+        {
+         from: accounts[0],
+       })
+      // Concatenation of the blockhash and the epoch-1 to check later if it's equal to the last beacon
       const concatenated = web3.utils.hexToBytes(blockHash).concat(
         web3.utils.hexToBytes(
           web3.utils.padLeft(
@@ -65,27 +71,40 @@ contract("New Block Relay", accounts => {
       const setEpoch = contest.setEpoch(89159)
       await waitForHash(setEpoch)
       const epoch = await contest.updateEpoch.call()
-
+      // Set the ABS to three
+      await contest.setAbsIdentitiesNumber(3)
       // Update the ABS to be included
-      await contest.pushActivity(1)
+      await contest.pushActivity(1, accounts[0])
+      await contest.pushActivity(1, accounts[1])
+      await contest.pushActivity(1, accounts[2])
 
-      // Propose blockHash1 to the Block Relay
-      const tx1 = contest.proposeBlock(blockHash1, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
+      // Propose vote1 to the Block Relay
+      const tx1 = contest.proposeBlock(blockHash1, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0,
+        {
+         from: accounts[0],
+       })
       await waitForHash(tx1)
-      // Propose blockHash2 to the Block Relay
-      contest.proposeBlock(blockHash2, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
-      // Propose for the second time blockHash2
-      contest.proposeBlock(blockHash2, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
-      // Get the vote proposed as the concatenation of the inputs of the proposeBlock
+      // Propose vote2 to the Block Relay
+      contest.proposeBlock(blockHash2, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0,
+        {
+         from: accounts[1],
+       })
+      // Propose for the second time vote2
+      contest.proposeBlock(blockHash2, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0,
+        {
+         from: accounts[2],
+       })
       const Vote2 = await contest.getVote.call(blockHash2, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
 
       // Wait unitl the next epoch so to get the final result
       await contest.nextEpoch()
 
       // Propose another block in the next epoch so the previous one is finalized
-      await contest.proposeBlock(0, epoch, 0, 0, Vote2)
-
-      // Concatenation of the blockHash2 and the epoch to check later if it's equal to the last beacon
+      await contest.proposeBlock(0, epoch, 0, 0, Vote2,
+        {
+         from: accounts[0],
+       })
+      // Concatenation of the blockhash and the epoch to check later if it's equal to the last beacon
       const concatenated = web3.utils.hexToBytes(blockHash2).concat(
         web3.utils.hexToBytes(
           web3.utils.padLeft(
@@ -113,16 +132,27 @@ contract("New Block Relay", accounts => {
       const epoch = await contest.updateEpoch.call()
 
       // Update the ABS to be included
-      await contest.pushActivity(1)
+      // Update the ABS to be included
+      await contest.pushActivity(1, accounts[0])
+      await contest.pushActivity(1, accounts[1])
+      await contest.pushActivity(1, accounts[2])
       // Set the number of members of the ABS to 3
       await contest.setAbsIdentitiesNumber(3)
-
-      // Propose blockHash1 3 times to the Block Relay
-      const tx = contest.proposeBlock(blockHash1, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
+      // Propose the vote 3 times to the Block Relay
+      const tx = contest.proposeBlock(blockHash1, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0,
+        {
+         from: accounts[0],
+       })
       await waitForHash(tx)
-      const tx2 = contest.proposeBlock(blockHash1, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
+      const tx2 = contest.proposeBlock(blockHash1, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0,
+        {
+         from: accounts[1],
+       })
       await waitForHash(tx2)
-      const tx3 = contest.proposeBlock(blockHash1, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
+      const tx3 = contest.proposeBlock(blockHash1, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0,
+        {
+         from: accounts[2],
+       })
       await waitForHash(tx3)
       // Get the vote proposed as the concatenation of the inputs of the proposeBlock
       const Vote = await contest.getVote.call(blockHash1, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
@@ -131,8 +161,10 @@ contract("New Block Relay", accounts => {
       await contest.nextEpoch()
 
       // Propose another block in the new epoch and so post the previous one
-      contest.proposeBlock(blockHash2, epoch, drMerkleRoot, tallyMerkleRoot, Vote)
-
+      contest.proposeBlock(blockHash2, epoch, drMerkleRoot, tallyMerkleRoot, Vote,
+        {
+         from: accounts[0],
+       })
       // Concatenation of the blockhash and the epoch -1 to check later if it's equal to the last beacon
       const concatenated = web3.utils.hexToBytes(blockHash1).concat(
         web3.utils.hexToBytes(
@@ -158,22 +190,25 @@ contract("New Block Relay", accounts => {
       const setEpoch = contest.setEpoch(89159)
       await waitForHash(setEpoch)
       const epoch = await contest.updateEpoch.call()
-
-      // Update the ABS to be included
-      await contest.pushActivity(1)
       // Set the abs to 3 identities
       await contest.setAbsIdentitiesNumber(3)
-
+      // Update the ABS to be included
+      await contest.pushActivity(1, accounts[0])
       // Propose the vote to the Block Relay
-      const tx = contest.proposeBlock(blockHash, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
+      const tx = contest.proposeBlock(blockHash, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0,
+        {
+         from: accounts[0],
+       })
       await waitForHash(tx)
 
       // Wait unitl the next epoch to get the final result
       await contest.nextEpoch()
 
       // Propose another block in the next epoch so the previous one is finalized
-      await contest.proposeBlock(0, epoch, 0, 0, 0)
-
+      await contest.proposeBlock(0, epoch, 0, 0, 0,
+        {
+         from: accounts[0],
+       })
       // Check the status of epoch -2
       const epochStatus = await contest.checkEpochFinalized.call(epoch)
       assert.equal(epochStatus, false)
@@ -192,13 +227,12 @@ contract("New Block Relay", accounts => {
       const epoch = await contest.updateEpoch.call()
 
       // Update the ABS to be included
-      await contest.pushActivity(1)
-
+      await contest.pushActivity(1, accounts[0])
       // Should revert because proposing for the current epoch
-      await truffleAssert.reverts(contest.proposeBlock(blockHash, epoch, drMerkleRoot, tallyMerkleRoot, 0),
-        "Proposing a block for a non valid epoch")
-      // Should revert because proposing for the current epoch - 2
-      await truffleAssert.reverts(contest.proposeBlock(blockHash, epoch - 2, drMerkleRoot, tallyMerkleRoot, 0),
+      await truffleAssert.reverts(contest.proposeBlock(vote, epoch, drMerkleRoot, tallyMerkleRoot, 0,
+        {
+         from: accounts[0],
+       }),
         "Proposing a block for a non valid epoch")
     })
 
@@ -215,13 +249,44 @@ contract("New Block Relay", accounts => {
       const epoch = await contest.updateEpoch.call()
 
       // should revert beacause not a memeber of the ABS
-      await truffleAssert.reverts(contest.proposeBlock(blockHash, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0),
+      await truffleAssert.reverts(contest.proposeBlock(vote, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0,
+        {
+         from: accounts[0],
+       }),
         "Not a member of the abs")
     })
 
-    it("should check candidates is deleted when posted", async () => {
-      // The array of vote candidates should be deleted when a vote is finalized
-      // Block's hashes we want to propose
+    it("should revert when proposing twice in the same epoch", async () => {
+      // The are to votes: blockHash1, voted once and blockHash2 voted twice.
+      // It should win blockHash2 and so be posted in the Block Relay
+      const blockHash1 = "0x" + sha.sha256("first vote")
+      const blockHash2 = "0x" + sha.sha256("second vote")
+      const drMerkleRoot = 1
+      const tallyMerkleRoot = 1
+      // Fix the timestamp in witnet to be 89159
+      const setEpoch = contest.setEpoch(89159)
+      await waitForHash(setEpoch)
+      const epoch = await contest.updateEpoch.call()
+      // Set the ABS to three
+      await contest.setAbsIdentitiesNumber(3)
+      // Update the ABS to be included
+      await contest.pushActivity(1, accounts[0])
+      // Propose vote1 to the Block Relay
+      const tx1 = contest.proposeBlock(blockHash1, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0,
+        {
+         from: accounts[0],
+       })
+      await waitForHash(tx1)
+      await truffleAssert.reverts(contest.proposeBlock(blockHash2, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0,
+        {
+         from: accounts[0],
+       }),
+        "Already proposed a block")
+    })
+
+
+    it("should check a candidates is deleted when posted", async () => {
+      // the blockhash we want to propose
       const blockHash = "0x" + sha.sha256("the vote to propose")
       const drMerkleRoot = 1
       const tallyMerkleRoot = 1
@@ -231,10 +296,12 @@ contract("New Block Relay", accounts => {
       let epoch = await contest.updateEpoch.call()
 
       // Update the ABS to be included
-      await contest.pushActivity(1)
-
+      await contest.pushActivity(1, accounts[0])
       // Propose the vote to the Block Relay
-      const tx = contest.proposeBlock(blockHash, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
+      const tx = contest.proposeBlock(blockHash, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0,
+        {
+         from: accounts[0],
+       })
       await waitForHash(tx)
 
       // Fix the timestamp to be one epoch later
@@ -267,16 +334,27 @@ contract("New Block Relay", accounts => {
       let epoch = await contest.updateEpoch.call()
 
       // Update the ABS to be included
-      await contest.pushActivity(1)
+      await contest.pushActivity(1, accounts[0])
+      await contest.pushActivity(1, accounts[1])
+      await contest.pushActivity(1, accounts[2])
       // Set the ABS to 3 members
       await contest.setAbsIdentitiesNumber(3)
 
       // Propose blockHash0 3 times to the Block Relay
-      const tx = contest.proposeBlock(blockHash0, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
+      const tx = contest.proposeBlock(blockHash0, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0,
+        {
+         from: accounts[0],
+       })
       await waitForHash(tx)
-      const tx1 = contest.proposeBlock(blockHash0, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
+      const tx1 = contest.proposeBlock(blockHash0, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0,
+        {
+         from: accounts[1],
+       })
       await waitForHash(tx1)
-      const tx2 = contest.proposeBlock(blockHash0, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
+      const tx2 = contest.proposeBlock(blockHash0, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0,
+        {
+         from: accounts[2],
+       })
       await waitForHash(tx2)
       // Get the vote proposed as the concatenation of the inputs of the proposeBlock
       const Vote1 = await contest.getVote.call(blockHash0, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0)
@@ -286,7 +364,10 @@ contract("New Block Relay", accounts => {
       epoch = await contest.updateEpoch.call()
 
       // Propose blockHash1 to the Block Relay
-      const tx3 = contest.proposeBlock(blockHash1, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote1)
+      const tx3 = contest.proposeBlock(blockHash1, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote1,
+        {
+         from: accounts[0],
+       })
       await waitForHash(tx3)
       // Get the vote proposed as the concatenation of the inputs of the proposeBlock
       const Vote2 = await contest.getVote.call(blockHash1, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote1)
@@ -296,7 +377,10 @@ contract("New Block Relay", accounts => {
       epoch = await contest.updateEpoch.call()
 
       // Propose blockHash2 to the Block Relay
-      const tx7 = contest.proposeBlock(blockHash2, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote2)
+      const tx7 = contest.proposeBlock(blockHash2, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote2,
+        {
+         from: accounts[1],
+       })
       await waitForHash(tx7)
       // Get the vote proposed as the concatenation of the inputs of the proposeBlock
       const Vote3 = await contest.getVote.call(blockHash2, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote2)
@@ -306,11 +390,20 @@ contract("New Block Relay", accounts => {
       epoch = await contest.updateEpoch.call()
 
       // Propose 3 times blockHash3 to the Block Relay
-      const tx4 = contest.proposeBlock(blockHash3, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote3)
+      const tx4 = contest.proposeBlock(blockHash3, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote3,
+        {
+         from: accounts[0],
+       })
       await waitForHash(tx4)
-      const tx5 = contest.proposeBlock(blockHash3, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote3)
+      const tx5 = contest.proposeBlock(blockHash3, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote3,
+        {
+         from: accounts[1],
+       })
       await waitForHash(tx5)
-      const tx6 = contest.proposeBlock(blockHash3, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote3)
+      const tx6 = contest.proposeBlock(blockHash3, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote3,
+        {
+         from: accounts[2],
+       })
       await waitForHash(tx6)
       // Get the vote proposed as the concatenation of the inputs of the proposeBlock
       const Vote4 = await contest.getVote.call(blockHash3, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote3)
@@ -320,8 +413,10 @@ contract("New Block Relay", accounts => {
       epoch = await contest.updateEpoch.call()
 
       // Propose a random vote just to finalize previous epochs
-      await contest.proposeBlock(blockHash2, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote4)
-
+      await contest.proposeBlock(blockHash2, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote4,
+        {
+         from: accounts[0],
+       })
       // Check the blockHash for epoch 89159 is the right one
       let FinalBlockHash1 = await contest.getBlockHash.call(89159)
       FinalBlockHash1 = "0x" + FinalBlockHash1.toString(16)
@@ -352,12 +447,17 @@ contract("New Block Relay", accounts => {
       const epoch1 = await contest.updateEpoch.call()
 
       // Update the ABS to be included
-      await contest.pushActivity(1)
+      await contest.pushActivity(1, accounts[0])
+      await contest.pushActivity(1, accounts[1])
+      await contest.pushActivity(1, accounts[2])
       // Set the ABS to 3 members
       await contest.setAbsIdentitiesNumber(3)
 
       // Propose blockHash0 to he Block Relay
-      const tx = contest.proposeBlock(blockHash0, epoch1 - 1, drMerkleRoot, tallyMerkleRoot, 0)
+      const tx = contest.proposeBlock(blockHash0, epoch1 - 1, drMerkleRoot, tallyMerkleRoot, 0,
+        {
+         from: accounts[0],
+       })
       await waitForHash(tx)
       // Get the vote proposed as the concatenation of the inputs of the proposeBlock
       const Vote = await contest.getVote.call(blockHash0, epoch1 - 1, drMerkleRoot, tallyMerkleRoot, 0)
@@ -369,10 +469,18 @@ contract("New Block Relay", accounts => {
       const epoch3 = await contest.updateEpoch.call()
 
       // Propose 3 times blockHash3 to the Block Relay
-      contest.proposeBlock(blockHash1, epoch3 - 1, drMerkleRoot, tallyMerkleRoot, Vote)
-      contest.proposeBlock(blockHash1, epoch3 - 1, drMerkleRoot, tallyMerkleRoot, Vote)
-      contest.proposeBlock(blockHash1, epoch3 - 1, drMerkleRoot, tallyMerkleRoot, Vote)
-      // Get the vote proposed as the concatenation of the inputs of the proposeBlock
+      contest.proposeBlock(blockHash1, epoch3 - 1, drMerkleRoot, tallyMerkleRoot, Vote,
+        {
+         from: accounts[0],
+       })
+      contest.proposeBlock(blockHash1, epoch3 - 1, drMerkleRoot, tallyMerkleRoot, Vote,
+        {
+         from: accounts[1],
+       })
+      contest.proposeBlock(blockHash1, epoch3 - 1, drMerkleRoot, tallyMerkleRoot, Vote,
+        {
+         from: accounts[2],
+       })
       const Vote3 = await contest.getVote.call(blockHash1, epoch3 - 1, drMerkleRoot, tallyMerkleRoot, Vote)
 
       // Wait for next epoch
@@ -380,9 +488,11 @@ contract("New Block Relay", accounts => {
       const epoch4 = await contest.updateEpoch.call()
 
       // Propose a random vote just to finalize previous epochs
-      await contest.proposeBlock(blockHash2, epoch4 - 1, drMerkleRoot, tallyMerkleRoot, Vote3)
-
-      // Check that the correct epochs are finalized
+      await contest.proposeBlock(blockHash2, epoch4 - 1, drMerkleRoot, tallyMerkleRoot, Vote3,
+        {
+         from: accounts[0],
+       })
+      // Now we want to check that
       let epochStatus = await contest.checkEpochFinalized.call(epoch3 - 1)
       assert.equal(epochStatus, true)
       epochStatus = await contest.checkEpochFinalized.call(epoch1 - 1)

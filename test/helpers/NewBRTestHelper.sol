@@ -23,8 +23,8 @@ contract NewBRTestHelper is NewBlockRelay {
   NewBlockRelay(_witnetGenesis, _epochSeconds, _firstBlock) public {}
 
   // Pushes the activity in the ABS
-  function pushActivity(uint256 _blockNumber) public {
-    address _address = msg.sender;
+  function pushActivity(uint256 _blockNumber, address _address) public {
+    //address address1 = _address;
     abs.pushActivity(_address, _blockNumber);
   }
 

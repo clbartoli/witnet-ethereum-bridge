@@ -83,7 +83,7 @@ library ActiveBridgeSetLib {
     return true;
   }
 
-  /// @dev Checks if an address is a memeber of the ABS
+  /// @dev Checks if an address is a member of the ABS
   /// @param _abs The Active Bridge Set structure from the Witnet Bridge Interface.
   /// @param _address The address to check.
   /// @return true or false
@@ -95,7 +95,7 @@ library ActiveBridgeSetLib {
       currentSlot,
       lastSlot,
       overflow);
-    for (uint i; i < _abs.epochIdentities[lastSlot].length;) {
+    for (uint i; i < _abs.epochIdentities[lastSlot].length; i++) {
       if (_abs.epochIdentities[lastSlot][i] == _address) {
         return true;
         }

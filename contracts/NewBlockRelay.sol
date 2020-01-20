@@ -339,6 +339,9 @@ contract NewBlockRelay is WitnetBridgeInterface {
     lastBlock.blockHash = _blockHash;
     lastBlock.epoch = _epoch;
 
+    // Update the ABS activity once finalized
+    uint256 activeIdentities = uint256(abs.activeIdentities);
+
     // Delete the condidates array so its empty for next epoch
     for (uint i = 0; i <= candidates.length - 1; i++) {
       delete voteInfo[candidates[i]].voteHashes;

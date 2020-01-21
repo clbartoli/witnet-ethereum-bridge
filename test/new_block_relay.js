@@ -223,7 +223,7 @@ contract("New Block Relay", accounts => {
       // Update the ABS to be included
       await contest.pushActivity(accounts[0])
       // Should revert because proposing for the current epoch
-      await truffleAssert.reverts(contest.proposeBlock(vote, epoch, drMerkleRoot, tallyMerkleRoot, 0,
+      await truffleAssert.reverts(contest.proposeBlock(blockHash, epoch, drMerkleRoot, tallyMerkleRoot, 0,
         {
           from: accounts[0],
         }),
@@ -243,7 +243,7 @@ contract("New Block Relay", accounts => {
       const epoch = await contest.updateEpoch.call()
 
       // should revert beacause not a memeber of the ABS
-      await truffleAssert.reverts(contest.proposeBlock(vote, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0,
+      await truffleAssert.reverts(contest.proposeBlock(blockHash, epoch - 1, drMerkleRoot, tallyMerkleRoot, 0,
         {
           from: accounts[0],
         }),
@@ -318,6 +318,7 @@ contract("New Block Relay", accounts => {
       const blockHash1 = "0x" + sha.sha256("first vote")
       const blockHash2 = "0x" + sha.sha256("second vote")
       const blockHash3 = "0x" + sha.sha256("third vote")
+      const blockHash4 = "0x" + sha.sha256("fourth vote")
       const drMerkleRoot = 1
       const tallyMerkleRoot = 1
 
@@ -403,7 +404,7 @@ contract("New Block Relay", accounts => {
       epoch = await contest.updateEpoch.call()
 
       // Propose a random vote just to finalize previous epochs
-      await contest.proposeBlock(blockHash2, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote4,
+      await contest.proposeBlock(blockHash4, epoch - 1, drMerkleRoot, tallyMerkleRoot, Vote4,
         {
           from: accounts[0],
         })

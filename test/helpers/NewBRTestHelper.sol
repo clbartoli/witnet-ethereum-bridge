@@ -16,16 +16,27 @@ contract NewBRTestHelper is NewBlockRelay {
   uint256 timestamp;
   uint256 witnetGenesis;
   uint256 firstBlock;
+  mapping (address => bool) public absAddresses;
 
   using ActiveBridgeSetLib for ActiveBridgeSetLib.ActiveBridgeSet;
+
+   //  Ensures that the address is in the abs
+  modifier isAbsMember(address _address){
+    require(absAddresses[_address] == true, "Not a member of the abs");
+    _;
+  }
 
   constructor (uint256 _witnetGenesis, uint256 _epochSeconds, uint256 _firstBlock)
   NewBlockRelay(_witnetGenesis, _epochSeconds, _firstBlock) public {}
 
   // Pushes the activity in the ABS
-  function pushActivity(uint256 _blockNumber, address _address) public {
-    //address address1 = _address;
-    abs.pushActivity(_address, _blockNumber);
+  function pushActivity(address _address) public {
+    absAddresses[_address] = true;
+  }
+
+  //  the ABS
+  function deleteActivity(address _address) public {
+    absAddresses[_address] = false;
   }
 
   // Updates the currentEpoch
@@ -41,11 +52,6 @@ contract NewBRTestHelper is NewBlockRelay {
   // Sets the currentEpoch
   function setEpoch(uint256 _epoch) public returns (uint256) {
     currentEpoch = _epoch;
-  }
-
-  // Sets the number of members in the ABS
-  function setAbsIdentitiesNumber(uint256 _identitiesNumber) public returns (uint256) {
-    activeIdentities = _identitiesNumber;
   }
 
   // Gets the vote with the poposeBlock inputs

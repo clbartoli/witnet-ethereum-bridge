@@ -1,6 +1,6 @@
 pragma solidity ^0.5.0;
 
-import "../WintetRequestsBoardInterface.sol";
+import "../WitnetRequestsBoardInterface.sol";
 
 
 /**
@@ -10,7 +10,7 @@ import "../WintetRequestsBoardInterface.sol";
   * The result of the requests will be posted back to this contract by the bridge nodes too.
  * @author Witnet Foundation
  */
-contract MockWitnetRequestsBoard is WintetRequestsBoardInterface {
+contract MockWitnetRequestsBoard is WitnetRequestsBoardInterface {
 
   struct DataRequest {
     bytes dr;

@@ -7,7 +7,7 @@ pragma solidity ^0.5.0;
  *  - Read the result of a dr
  * @author Witnet Foundation
  */
-interface WintetRequestsBoardInterface {
+interface WitnetRequestsBoardInterface {
 
   /// @dev Posts a data request into the WRB in expectation that it will be relayed and resolved in Witnet with a total reward that equals to msg.value.
   /// @param _dr The bytes corresponding to the Protocol Buffers serialization of the data request output.

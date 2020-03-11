@@ -4,7 +4,7 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "vrf-solidity/contracts/VRF.sol";
 import "./ActiveBridgeSetLib.sol";
 import "block-relay/contracts/BlockRelayProxy.sol";
-import "./WintetRequestsBoardInterface.sol";
+import "./WitnetRequestsBoardInterface.sol";
 
 
 /**
@@ -14,7 +14,7 @@ import "./WintetRequestsBoardInterface.sol";
   * The result of the requests will be posted back to this contract by the bridge nodes too.
  * @author Witnet Foundation
  */
-contract WitnetRequestsBoard is WintetRequestsBoardInterface {
+contract WitnetRequestsBoard is WitnetRequestsBoardInterface {
 
   using SafeMath for uint256;
   using ActiveBridgeSetLib for ActiveBridgeSetLib.ActiveBridgeSet;

@@ -35,6 +35,8 @@ contract WitnetRequestsBoard is WintetRequestsBoardInterface {
 
   ActiveBridgeSetLib.ActiveBridgeSet abs;
 
+  address witnet;
+
   // Replication factor for Active Bridge Set identities
   uint8 repFactor;
 
@@ -112,6 +114,7 @@ contract WitnetRequestsBoard is WintetRequestsBoardInterface {
 
   constructor (address _blockRelayAddress, uint8 _repFactor) public {
     blockRelay = BlockRelayProxy(_blockRelayAddress);
+    witnet = msg.sender;
 
     // Insert an empty request so as to initialize the requests array with length > 0
     DataRequest memory request;
@@ -312,6 +315,15 @@ contract WitnetRequestsBoard is WintetRequestsBoardInterface {
     abs.updateActivity(_blockNumber);
   }
 
+  /// @dev Verifies if the contract is upgradable
+  /// @return true if the contract upgradable
+  function isUpgradable(address _address) external view returns(bool) {
+    if (_address == witnet) {
+      return true;
+    }
+    return false;
+  }
+
   /// @dev Claim drs to be posted to Witnet by the node
   /// @param _ids Data request ids to be claimed
   /// @param _poe PoE claiming eligibility
@@ -415,4 +427,5 @@ contract WitnetRequestsBoard is WintetRequestsBoardInterface {
       r,
       s) == hashedKey;
   }
+
 }

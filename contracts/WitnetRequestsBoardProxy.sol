@@ -1,6 +1,7 @@
 pragma solidity ^0.5.0;
 
 import "./WitnetRequestsBoardInterface.sol";
+import "./StateContract.sol";
 
 
 /**
@@ -11,14 +12,16 @@ import "./WitnetRequestsBoardInterface.sol";
  * @author Witnet Foundation
  */
 contract WitnetRequestsBoardProxy {
+  StateContract state;
 
   address public witnetRequestsBoardAddress;
   WitnetRequestsBoardInterface witnetRequestsBoardInstance;
 
-  uint256 lastDrId;
+  //uint256 lastDrId;
   mapping(uint256 => address)  idWrb;
-  uint256[] lastIds;
+  //uint256[] lastIds;
 
+  event Controllerget(uint256, address);
   modifier notIdentical(address _newAddress) {
     require(_newAddress != witnetRequestsBoardAddress, "The provided Witnet Requests Board instance address is already in use");
     _;
@@ -38,8 +41,9 @@ contract WitnetRequestsBoardProxy {
     payable
     returns(uint256)
   {
-    lastDrId = witnetRequestsBoardInstance.postDataRequest(_dr, _tallyReward);
-    return witnetRequestsBoardInstance.postDataRequest(_dr, _tallyReward);
+    uint256 currId = witnetRequestsBoardInstance.postDataRequest(_dr, _tallyReward);
+    state.pushId(currId);
+    return currId;
   }
 
   /// @dev Increments the rewards of a data request by adding more value to it. The new request reward will be increased by msg.value minus the difference between the former tally reward and the new tally reward.
@@ -57,35 +61,52 @@ contract WitnetRequestsBoardProxy {
   /// @return The result of the DR
   function readResult (uint256 _id)
     external
-    view
     returns(bytes memory)
-  {
-    uint256 n = lastIds.length;
-    if (_id > lastIds[n]) {
+    {
+    address controller = getController(_id);
+    // emit Controllerget(_id, controller);
+    if (witnetRequestsBoardAddress == controller) {
       return witnetRequestsBoardInstance.readResult(_id);
+    } else {
+      return WitnetRequestsBoardInterface(controller).readResult(_id);
     }
-
-    else {
-      for (uint i = 0; i <= n - 1; i++) {
-        if (_id > lastIds[n - 1 - i]){
-          WitnetRequestsBoardInterface wrbWithResult;
-          wrbWithResult = WitnetRequestsBoardInterface(idWrb[lastIds[n - 1 - i]]);
-        } else{
-          continue;
-        }
-      }
-    }
-    return witnetRequestsBoardInstance.readResult(_id);
   }
 
   /// @notice Upgrades the Witnet Requests Board if the current one is upgradeable
   /// @param _newAddress address of the new block relay to upgrade
   function upgradeWitnetRequestsBoard(address _newAddress) public notIdentical(_newAddress) {
+
     require(witnetRequestsBoardInstance.isUpgradable(msg.sender), "The upgrade has been rejected by the current implementation");
-    idWrb[lastDrId] = witnetRequestsBoardAddress;
-    lastIds.push(lastDrId);
+    // delete all the ids from the last wrb but thw first
+    state.clearIds();
+    // Map the las id with the  correponding WRB
+    uint256[] memory lastRequestsIds = state.getLastRequestsIds();
+    uint256 lastIdPosition = state.getLastIdPosition();
+    idWrb[lastRequestsIds[lastIdPosition]] == witnetRequestsBoardAddress;
+
+    // currId = witnetRequestsBoardAddress.requests().length;
+    // lastDrId = lastDrId + currId;
+    // idWrb[lastDrId] = witnetRequestsBoardAddress;
+    // lastIds.push(lastDrId);
     witnetRequestsBoardAddress = _newAddress;
     witnetRequestsBoardInstance = WitnetRequestsBoardInterface(_newAddress);
+  }
+
+  /// @notice Gets the controller associated with the WBR controller corresponding to the Id provided
+  /// @param _id the Id that to work with
+  function getController(uint256 _id) public view returns(address _controller) {
+    uint256[] memory lastRequestsIds = state.getLastRequestsIds();
+    uint256 lastIdPosition = state.getLastIdPosition();
+    uint256 n = lastRequestsIds.length;
+    if (_id > lastIdPosition && _id <= lastRequestsIds[n - 1]) {
+      return (witnetRequestsBoardAddress);
+    } else {
+      for (uint i = 1; i <= lastIdPosition; i++) {
+        if (_id > lastRequestsIds[lastIdPosition - i]) {
+          return (idWrb[lastRequestsIds[lastIdPosition - i + 1]]);
+        }
+      }
+    }
   }
 
 }

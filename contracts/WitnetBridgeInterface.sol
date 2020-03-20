@@ -180,7 +180,8 @@ contract WitnetBridgeInterface is WBIInterface {
     uint256 _id,
     uint256[] calldata _poi,
     uint256 _index,
-    uint256 _blockHash
+    uint256 _blockHash,
+    uint256 _epoch
     )
     external
     drNotIncluded(_id)
@@ -190,6 +191,7 @@ contract WitnetBridgeInterface is WBIInterface {
     if (blockRelay.verifyDrPoi(
       _poi,
       _blockHash,
+      _epoch,
       _index,
       drOutputHash)) {
       requests[_id].drHash = drHash;
@@ -213,6 +215,7 @@ contract WitnetBridgeInterface is WBIInterface {
     uint256[] calldata _poi,
     uint256 _index,
     uint256 _blockHash,
+    uint256 _epoch,
     bytes calldata _result
     )
     external
@@ -224,6 +227,7 @@ contract WitnetBridgeInterface is WBIInterface {
     if (blockRelay.verifyTallyPoi(
       _poi,
       _blockHash,
+      _epoch,
       _index,
       resHash)){
       requests[_id].result = _result;

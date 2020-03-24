@@ -16,7 +16,7 @@ contract WitnetRequestsBoardProxy {
   WitnetRequestsBoardInterface witnetRequestsBoardInstance;
   // Last id of the WRB controller
   uint256 currentLastId;
-
+ event Offset(uint256 _offset);
   // Struct if the information of each controller
   struct ControllerInfo {
     address controllerAddress;
@@ -49,9 +49,11 @@ contract WitnetRequestsBoardProxy {
     returns(uint256)
   {
     uint256 n = controllers.length;
-    uint256 offset = controllers[n - 1].offset;
+    uint256 offset = controllers[n - 1].lastId;
+    emit Offset(offset);
     //Update the currentLastId with the id in the controller plus the offSet
     currentLastId = witnetRequestsBoardInstance.postDataRequest.value(msg.value)(_dr, _tallyReward) + offset;
+    emit Offset(currentLastId);
     return currentLastId;
   }
 
@@ -99,7 +101,7 @@ contract WitnetRequestsBoardProxy {
     address wrbAddress;
     uint256 offSetWrb;
     (wrbAddress, offSetWrb) = getController(_id);
-    // Return the result of the DR readed in the corresponding Controller with its own id
+    // Return the result of the DR in the corresponding Controller with its own id
     WitnetRequestsBoardInterface wrbWithResult;
     wrbWithResult = WitnetRequestsBoardInterface(wrbAddress);
     return wrbWithResult.readResult(_id - offSetWrb);
@@ -114,7 +116,7 @@ contract WitnetRequestsBoardProxy {
     uint256 n = controllers.length;
     // Map the currentLastId to the corresponding witnetRequestsBoardAddress and add it to controllers
     // controllers.push(ControllerInfo({controllerAddress: _newAddress, lastId: currentLastId, offset: controllers[n - 1].lastId}));
-    controllers.push(ControllerInfo({controllerAddress: witnetRequestsBoardAddress, lastId: currentLastId, offset: controllers[n - 1].lastId}));
+    controllers.push(ControllerInfo({controllerAddress: _newAddress, lastId: currentLastId, offset: currentLastId}));
     // Upgrade the WRB
     witnetRequestsBoardAddress = _newAddress;
     witnetRequestsBoardInstance = WitnetRequestsBoardInterface(_newAddress);
@@ -124,12 +126,16 @@ contract WitnetRequestsBoardProxy {
   /// @param _id id of a Data Request from which we get the controller
   function getController(uint256 _id) internal view returns(address _controllerAddress, uint256 _offset) {
     uint256 n = controllers.length;
+    // if (_id > controllers[n-1].lastId) {
+    //   return (witnetRequestsBoardAddress, controllers[n-1].lastId);
+    // } else {
     // If the id is bigger than the lastId of the previous Controller, read the result in the current Controller
     for (uint i = n; i > 0; i--) {
-      if (_id >= controllers[i-1].lastId) {
-        return (controllers[i-1].controllerAddress, controllers[i-1].offset);
+      if (_id > controllers[i - 1].lastId) {
+        return (controllers[i - 1].controllerAddress, controllers[i - 1].offset);
       }
     }
+    //}
   }
 
 }

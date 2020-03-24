@@ -29,10 +29,27 @@ contract WrbProxyTestHelper is WitnetRequestsBoardProxy {
     return witnetRequestsBoardAddress;
   }
 
+  function getLastId() public view returns(uint256) {
+    uint256 n = controllers.length;
+    uint256 offset = controllers[n - 1].lastId;
+    return offset;
+  }
+
   function getControllerAddress(uint256 _id) public returns(address) {
     address wrb;
     uint256 offset;
     (wrb, offset) = getController(_id);
+    return wrb;
+  }
+
+  function getLastControllerId() public returns(uint256) {
+    uint256 n = controllers.length;
+    uint256 lastId = controllers[n - 1].lastId;
+    return lastId;
+  }
+
+  function getCurrentController() public returns(address) {
+    address wrb = witnetRequestsBoardAddress;
     return wrb;
   }
 

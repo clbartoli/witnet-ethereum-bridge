@@ -50,8 +50,10 @@ contract("Witnet Requests Board Proxy", accounts => {
       })
       const txHash1 = await waitForHash(tx1)
       const txReceipt1 = await web3.eth.getTransactionReceipt(txHash1)
+      console.log(txReceipt1)
       // The id of the data request
       const id1 = txReceipt1.logs[0].data
+      console.log(id1)
 
       // check the currentLastId has been updated in the Proxy when posting the data request
       assert.equal(true, await wrbProxy.checkLastId.call(id1))
@@ -72,14 +74,16 @@ contract("Witnet Requests Board Proxy", accounts => {
 
       // The id of the data request
       const id1 = txReceipt1.logs[0].data
+      
 
       // Upgrade the WRB address to wrbInstance3
       await wrbProxy.upgradeWitnetRequestsBoard(wrbInstance3.address)
-
       // Get the address of the wrb form id1
       const wrb = await wrbProxy.getControllerAddress.call(id1)
+    
       // It should be equal to the address of wrbInstance1
       assert.equal(wrb, wrbInstance1.address)
+      assert.equal(await wrbProxy.getWrbAddress.call(), wrbInstance3.address)
     })
 
     it("should read the result", async () => {
@@ -87,20 +91,28 @@ contract("Witnet Requests Board Proxy", accounts => {
       const drBytes = web3.utils.fromAscii("This is a DR")
       const halfEther = web3.utils.toWei("0.5", "ether")
 
-      // Post the data request through the Proxy
-      const tx1 = wrbProxy.postDataRequest(drBytes, halfEther, {
+      // Post the data request through the Proxy with result "hello"
+      const tx2 = wrbProxy.postDataRequest(drBytes, halfEther, {
         from: accounts[0],
         value: web3.utils.toWei("1", "ether"),
       })
-      const txHash1 = await waitForHash(tx1)
-      const txReceipt1 = await web3.eth.getTransactionReceipt(txHash1)
+      const txHash2 = await waitForHash(tx2)
+      const txReceipt2 = await web3.eth.getTransactionReceipt(txHash2)
 
       // The id of the data request
-      const id1 = txReceipt1.logs[0].data
-
+      const id2 = txReceipt2.logs[0].data
+      console.log(id2)
+      // await wrbProxy.upgradeWitnetRequestsBoard(wrbInstance3.address)
+      const currentWrb = await wrbProxy.getCurrentController.call()
+      console.log(currentWrb)
+      const wrb = await wrbProxy.getControllerAddress.call(id2)
+      console.log(wrb)
+      console.log(wrbInstance1.address)
+      console.log(wrbInstance3.address)
       // Read the result
-      // const result = await wrbProxy.readResult.call(id1)
-      await wrbProxy.readResult.call(id1)
+      const result = await wrbProxy.readResult.call(id2)
+      console.log(result)
+      // await wrbProxy.readResult.call(id1)
       // assert.equal("hello", web3.utils.bytesToHex(result))
     })
 

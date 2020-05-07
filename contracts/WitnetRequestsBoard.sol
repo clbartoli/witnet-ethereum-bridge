@@ -27,7 +27,8 @@ contract WitnetRequestsBoard is WitnetRequestsBoardInterface {
     uint256 tallyReward;
     bytes result;
     uint256 timestamp;
-    // The epoch of the blockHash in which the last transaction related to the dr has been included
+    // The epoch of the block including the last transaction related to the dr
+    // (postDataRequest, reportDataRequestInclusion, reportResult)
     uint256 epoch;
     uint256 drHash;
     address payable pkhClaim;
@@ -265,6 +266,8 @@ contract WitnetRequestsBoard is WitnetRequestsBoardInterface {
  {
     // Ensures the result was published in a later block than the request
     require(requests[_id].epoch <= _epoch, "the result must be reported after the request is included");
+    // Update epoch of the request
+    requests[_id].epoch = _epoch;
 
     // Ensures the result byes do not have zero length
     // This would not be a valid encoding with CBOR and could trigger a reentrancy attack

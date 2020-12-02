@@ -20,6 +20,8 @@ library ActiveBridgeSetLib {
     mapping (uint16 => address[]) epochIdentities;
     // Mapping of identities with their participation count
     mapping (address => uint16) identityCount;
+    // Mapping each address to the last slot in which it participated
+    mapping (address => uint16) lastSlotIdentity;
     // Number of identities in the Active Bridge Set (consolidated during `ACTIVITY_LENGTH`)
     uint32 activeIdentities;
     // Number of identities for the next activity slot (to be updated in the next activity slot)
@@ -75,21 +77,27 @@ library ActiveBridgeSetLib {
       ))
     {
       _abs.lastBlockNumber = _blockNumber;
-    } else {
+    // } else if (_abs.identityCount[_address] != 0){
+       } else if (_abs.lastSlotIdentity[_address] == currentSlot && currentSlot != 0) {
       // Check if address was already counted as active identity in this current activity slot
-      uint256 epochIdsLength = _abs.epochIdentities[currentSlot].length;
-      for (uint256 i; i < epochIdsLength; i++) {
-        if (_abs.epochIdentities[currentSlot][i] == _address) {
-          return false;
-        }
+      // uint256 epochIdsLength = _abs.epochIdentities[currentSlot].length;
+      // for (uint256 i; i < epochIdsLength; i++) {
+      //   if (_abs.epochIdentities[currentSlot][i] == _address) {
+           return false;
+      //   }
+      // }
+
+      } else if (currentSlot == 0 && _abs.identityCount[_address] != 0) {
+        return false;
       }
-    }
+    
 
     // Update current activity slot with identity:
     //  1. Add currentSlot to `epochIdentities` with address
     //  2. If count = 0, increment by 1 `nextActiveIdentities`
     //  3. Increment by 1 the count of the identity
     _abs.epochIdentities[currentSlot].push(_address);
+    _abs.lastSlotIdentity[_address] = currentSlot;
     if (_abs.identityCount[_address] == 0) {
       _abs.nextActiveIdentities++;
     }

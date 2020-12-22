@@ -34,8 +34,7 @@ contract UsingWitnet {
 
   // Ensures that user-specified rewards are equal to the total transaction value to prevent users from burning any excess value
   modifier validRewards(uint256 _requestReward, uint256 _resultReward, uint256 _blockReward) {
-    require(_requestReward + _resultReward + _blockReward >= _requestReward, "The sum of rewards overflows");
-
+    require(_requestReward + _resultReward >= _requestReward && _requestReward + _resultReward + _blockReward >= _requestReward + _resultReward, "The sum of rewards overflows");
     require(msg.value == _requestReward + _resultReward + _blockReward, "Transaction value should equal the sum of rewards");
     _;
   }

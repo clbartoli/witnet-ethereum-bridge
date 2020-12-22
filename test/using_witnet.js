@@ -372,9 +372,31 @@ contract("UsingWitnet", accounts => {
 
     it("Should revert if reward amounts sum overflows", async () => {
       const resultReward = web3.utils.toBN("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+      const tallyReward = web3.utils.toBN("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+      const blockReward = web3.utils.toBN("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 
       await truffleAssert.reverts(
         clientContract._witnetPostRequest(request.address, resultReward, 1, 1, {
+          from: accounts[0],
+          value: 0,
+        }),
+        "The sum of rewards overflows"
+      )
+
+      await truffleAssert.reverts(
+        clientContract._witnetPostRequest(request.address, resultReward, tallyReward, blockReward, {
+          from: accounts[0],
+          value: 0,
+        }),
+        "The sum of rewards overflows"
+      )
+
+      const resultReward2 = web3.utils.toBN("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+      const tallyReward2 = web3.utils.toBN("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+      const blockReward2 = web3.utils.toBN("1")
+
+      await truffleAssert.reverts(
+        clientContract._witnetPostRequest(request.address, resultReward2, tallyReward2, blockReward2, {
           from: accounts[0],
           value: 0,
         }),

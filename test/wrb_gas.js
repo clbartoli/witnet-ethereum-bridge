@@ -89,7 +89,7 @@ contract("WitnetRequestBoard", ([
         ether("0.25"),
         ether("0.5"), {
           from: requestor,
-          value: ether("1"),
+          value: ether("1.5"),
         }
       )
       // Check `PostedRequest` event
@@ -109,9 +109,9 @@ contract("WitnetRequestBoard", ([
       const contractFinalBalance = await contractBalanceTracker.get()
       expect(
         contractFinalBalance.eq(contractInitialBalance
-          .add(ether("1"))
+          .add(ether("1.5"))
         ),
-        "contract balance should have increase after the request creation by 1 eth",
+        "contract balance should have increase after the request creation by 1.5 eth",
       ).to.equal(true)
     })
   })
@@ -123,7 +123,7 @@ contract("WitnetRequestBoard", ([
         ether("0.25"),
         ether("0.5"), {
           from: requestor,
-          value: ether("1"),
+          value: ether("1.5"),
         }
       )
     })
@@ -135,16 +135,16 @@ contract("WitnetRequestBoard", ([
       // Update data request (increased rewards)
       await this.WitnetRequestBoard.upgradeDataRequest(requestId, ether("0.5"), {
         from: requestor,
-        value: ether("1"),
+        value: ether("2.5"),
       })
 
       // Check contract balance (increased by rewards)
       const contractFinalBalance = await contractBalanceTracker.get()
       expect(
         contractFinalBalance.eq(contractInitialBalance
-          .add(ether("1"))
+          .add(ether("2.5"))
         ),
-        "contract balance should have increased after request upgrade by 1 eth",
+        "contract balance should have increased after request upgrade by 2.5 eth",
       ).to.equal(true)
     })
   })
@@ -153,7 +153,7 @@ contract("WitnetRequestBoard", ([
     beforeEach(async () => {
       await this.WitnetRequestBoard.postDataRequest(this.Request.address, ether("0.25"), ether("0.5"), {
         from: requestor,
-        value: ether("1"),
+        value: ether("1.5"),
       })
     })
     it("claimer can claim a data request", async () => {
@@ -235,7 +235,7 @@ contract("WitnetRequestBoard", ([
       // Post data request
       await this.WitnetRequestBoard.postDataRequest(this.Request.address, ether("0.25"), ether("0.5"), {
         from: requestor,
-        value: ether("1"),
+        value: ether("1.5"),
       })
       // Claim data request
       const publicKey = [data.publicKey.x, data.publicKey.y]
@@ -293,9 +293,9 @@ contract("WitnetRequestBoard", ([
 
       expect(
         contractFinalBalance.eq(contractInitialBalance
-          .sub(ether("0.375"))
+          .sub(ether("0.625"))
         ),
-        "contract balance should have decreased after reporting dr request inclusion by 0.375 eth",
+        "contract balance should have decreased after reporting dr request inclusion by 0.625 eth",
       ).to.equal(true)
       expect(
         claimerFinalBalance.eq(claimerInitialBalance
@@ -305,9 +305,9 @@ contract("WitnetRequestBoard", ([
       ).to.equal(true)
       expect(
         ownerFinalBalance.eq(ownerInitialBalance
-          .add(ether("0.125"))
+          .add(ether("0.375"))
         ),
-        "Owner balance should have increased after reporting b lock by 0.125 eth",
+        "Owner balance should have increased after reporting block by 0.375 eth",
       ).to.equal(true)
     })
   })
@@ -317,7 +317,7 @@ contract("WitnetRequestBoard", ([
       // Post data request
       await this.WitnetRequestBoard.postDataRequest(this.Request.address, ether("0.25"), ether("0.5"), {
         from: requestor,
-        value: ether("1"),
+        value: ether("1.5"),
       })
       // Claim data request
       const publicKey = [data.publicKey.x, data.publicKey.y]
@@ -385,9 +385,9 @@ contract("WitnetRequestBoard", ([
 
       expect(
         contractFinalBalance.eq(contractInitialBalance
-          .sub(ether("0.625"))
+          .sub(ether("0.875"))
         ),
-        "contract balance should have decreased after reporting dr request result by 0.625 eth",
+        "contract balance should have decreased after reporting dr request result by 0.875 eth",
       ).to.equal(true)
       expect(
         claimerFinalBalance.eq(claimerInitialBalance
@@ -398,9 +398,9 @@ contract("WitnetRequestBoard", ([
       ).to.equal(true)
       expect(
         ownerFinalBalance.eq(ownerInitialBalance
-          .add(ether("0.125"))
+          .add(ether("0.375"))
         ),
-        "Owner balance should have increased after reporting b lock by 0.125 eth",
+        "Owner balance should have increased after reporting block by 0.375 eth",
       ).to.equal(true)
     })
   })
@@ -410,7 +410,7 @@ contract("WitnetRequestBoard", ([
       // Post data request
       await this.WitnetRequestBoard.postDataRequest(this.Request.address, ether("0.25"), ether("0.5"), {
         from: requestor,
-        value: ether("1"),
+        value: ether("1.5"),
       })
       // Claim data request
       const publicKey = [data.publicKey.x, data.publicKey.y]

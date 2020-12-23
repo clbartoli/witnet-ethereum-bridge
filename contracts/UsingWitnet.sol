@@ -33,9 +33,9 @@ contract UsingWitnet {
   }
 
   // Ensures that user-specified rewards are equal to the total transaction value to prevent users from burning any excess value
-  modifier validRewards(uint256 _requestReward, uint256 _resultReward, uint256 _blockReward) {
-    require(_requestReward + _resultReward >= _requestReward && _requestReward + _resultReward + _blockReward >= _requestReward + _resultReward, "The sum of rewards overflows");
-    require(msg.value == _requestReward + _resultReward + _blockReward, "Transaction value should equal the sum of rewards");
+  modifier validRewards(uint256 _requestReward, uint256 _resultReward) {
+    require(_requestReward + _resultReward >= _requestReward && 2*(_requestReward +_requestReward) >= 2*_requestReward, "The sum of rewards overflows");
+    require(msg.value == 2*(_requestReward + _resultReward), "Transaction value should equal the sum of rewards");
     _;
   }
 
@@ -47,12 +47,12 @@ contract UsingWitnet {
   * @param _resultReward Reward specified for the user which posts back the request result
   * @return Sequencial identifier for the request included in the WitnetRequestsBoard
   */
-  function witnetPostRequest(Request _request, uint256 _requestReward, uint256 _resultReward, uint256 _blockReward)
+  function witnetPostRequest(Request _request, uint256 _requestReward, uint256 _resultReward)
     internal
-    validRewards(_requestReward, _resultReward, _blockReward)
+    validRewards(_requestReward, _resultReward)
   returns (uint256)
   {
-    return wrb.postDataRequest{value: _requestReward + _resultReward + _blockReward}(address(_request), _requestReward, _resultReward);
+    return wrb.postDataRequest{value: 2*(_requestReward + _resultReward)}(address(_request), _requestReward, _resultReward);
   }
 
   /**
@@ -79,7 +79,7 @@ contract UsingWitnet {
   */
   function witnetUpgradeRequest(uint256 _id, uint256 _requestReward, uint256 _resultReward)
     internal
-    validRewards(_requestReward, _resultReward, 0)
+    validRewards(_requestReward, _resultReward)
   {
     wrb.upgradeDataRequest{value: msg.value}(_id, _resultReward);
   }

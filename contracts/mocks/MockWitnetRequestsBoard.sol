@@ -65,8 +65,9 @@ contract MockWitnetRequestsBoard is WitnetRequestsBoardInterface {
     payable
     override
   {
-    requests[_id].inclusionReward += msg.value - _tallyReward;
+    requests[_id].inclusionReward += msg.value/2 - _tallyReward;
     requests[_id].tallyReward += _tallyReward;
+    requests[_id].blockReward += (requests[_id].inclusionReward + requests[_id].tallyReward);
   }
 
   /// @dev Reports the hash of a data request in Witnet.

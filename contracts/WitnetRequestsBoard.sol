@@ -60,6 +60,9 @@ contract WitnetRequestsBoard is WitnetRequestsBoardInterface {
   // Event emitted when a new DR is posted
   event PostedRequest(address indexed _from, uint256 _id);
 
+  event Prueba(uint256 _id_reward);
+  event Prueba2(address _address);
+
   // Event emitted when a DR inclusion proof is posted
   event IncludedRequest(address indexed _from, uint256 _id);
 
@@ -170,7 +173,7 @@ contract WitnetRequestsBoard is WitnetRequestsBoardInterface {
   function postDataRequest(address _requestAddress, uint256 _inclusionReward, uint256 _tallyReward)
     external
     payable
-    payingEnough(msg.value, SafeMath.add(_inclusionReward, _tallyReward))
+    payingEnough(msg.value, 2*SafeMath.add(_inclusionReward, _tallyReward))
     override
   returns(uint256)
   {
@@ -197,26 +200,31 @@ contract WitnetRequestsBoard is WitnetRequestsBoardInterface {
     return id;
   }
 
-  /// @dev Increments the rewards of a data request by adding more value to it. The new request reward will be increased by msg.value minus the difference between the former tally reward and the new tally reward.
+    /// @dev Increments the rewards of a data request by adding more value to it. The new request reward will be increased by msg.value minus the difference between the former tally reward and the new tally reward.
   /// @param _id The unique identifier of the data request.
   /// @param _tallyReward The new tally reward. Needs to be equal or greater than the former tally reward.
   function upgradeDataRequest(uint256 _id, uint256 _tallyReward)
     external
     payable
-    payingEnough(msg.value, _tallyReward)
+    //payingEnough(msg.value, 2*_tallyReward)
     resultNotIncluded(_id)
     override
   {
     if (requests[_id].drHash != 0) {
       require(
         msg.value == _tallyReward,
-        "Txn value should equal result reward argument (request reward already paid)"
+        "Txn value should equal result tally argument (tally reward already paid)"
       );
       requests[_id].tallyReward = SafeMath.add(requests[_id].tallyReward, _tallyReward);
+      requests[_id].blockReward = SafeMath.add(requests[_id].blockReward, requests[_id].inclusionReward);
     } else {
-      requests[_id].inclusionReward = SafeMath.add(requests[_id].inclusionReward, msg.value - _tallyReward);
+      emit Prueba(requests[_id].inclusionReward);
+      requests[_id].inclusionReward = SafeMath.add(requests[_id].inclusionReward, msg.value/2 - _tallyReward);
+      emit Prueba(requests[_id].inclusionReward);
       requests[_id].tallyReward = SafeMath.add(requests[_id].tallyReward, _tallyReward);
+      requests[_id].blockReward = SafeMath.add(requests[_id].tallyReward, requests[_id].inclusionReward);
     }
+  
   }
 
   /// @dev Checks if the data requests from a list are claimable or not.
@@ -262,9 +270,9 @@ contract WitnetRequestsBoard is WitnetRequestsBoardInterface {
     require(dataRequestCanBeClaimed(requests[_id]) == false, "Data Request has not yet been claimed");
 
     // Ensures the request inclusion is reported after the epoch in which the request was posted
-    require(
-      requests[_id].epoch < _epoch,
-      "The request inclusion must be reported after it is posted into the WRB");
+     require(
+       requests[_id].epoch < _epoch,
+       "The request inclusion must be reported after it is posted into the WRB");
     // Update the dr epoch
     requests[_id].epoch = _epoch;
     // Update the state upon which this function depends before the external call
